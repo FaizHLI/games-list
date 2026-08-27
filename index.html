@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Canon — Checklist</title>
-<meta name="description" content="297 games worth playing, with the recommended way to play each one.">
+<meta name="description" content="Games worth playing, with the recommended way to play each one.">
 <meta name="theme-color" content="#E8EAED" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15171A" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="preload" href="assets/fonts/public-sans-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/press-start-2p-400-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/fonts.css">
-<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/fonts.css?v=8ebdff78">
+<link rel="stylesheet" href="assets/app.css?v=76f420b6">
 <script>/* set an explicit theme before first paint so the choice never flashes */
 try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 </head>
@@ -36,12 +36,12 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <button class="chip" type="button" data-min="3" aria-pressed="false">3+</button>
       <button class="chip" type="button" data-min="4" aria-pressed="false">4+</button>
       <button class="chip" type="button" data-min="5" aria-pressed="false">5</button>
-      <button class="chip" type="button" id="shuffle">Pick one</button>
-      <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel">More</button>
+      <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
+      <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
     <div class="panel" id="panel" hidden>
       <div class="frow">
-        <span class="flabel" id="lblTime">TIME</span>
+        <span class="flabel">LENGTH</span>
         <button class="chip" type="button" data-time="0" aria-pressed="true">Any</button>
         <button class="chip" type="button" data-time="5" aria-pressed="false">5h or less</button>
         <button class="chip" type="button" data-time="10" aria-pressed="false">10h or less</button>
@@ -74,12 +74,12 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <button class="chip" type="button" id="importBtn">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <button class="chip" type="button" id="themeBtn">Theme: AUTO</button>
-    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you're playing now. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. Progress is shared with the playlist, saves automatically, and can be exported.</p>
+    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you are playing now. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. Progress is shared with the other list, saves automatically, and can be exported.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="data/games.js"></script>
-<script src="assets/app.js"></script>
+<script src="data/games.js?v=818a3ea1"></script>
+<script src="assets/app.js?v=b389a3c6"></script>
 </body>
 </html>

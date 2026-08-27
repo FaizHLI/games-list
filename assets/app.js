@@ -481,5 +481,11 @@ render();
 load();
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // updateViaCache:"none" keeps sw.js itself out of the HTTP cache, so a deploy is
+  // picked up on the next visit rather than up to ten minutes later
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      .then(reg => reg.update())
+      .catch(() => {});
+  });
 }

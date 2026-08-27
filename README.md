@@ -45,6 +45,7 @@ assets/fonts.css       @font-face for the self-hosted fonts
 assets/fonts/          Press Start 2P + Public Sans woff2, and their OFL licence
 assets/icon-*.png      app icons
 assets/make-icons.js   regenerates those icons: node assets/make-icons.js
+build.js               regenerates the two pages and sw.js: node build.js
 data/games.js          every game -> window.GAMES
 sw.js                  offline cache
 manifest.webmanifest   PWA metadata
@@ -82,5 +83,18 @@ local files.
 
 ## Deploying
 
-Pushing to `main` publishes via GitHub Pages. No build step. If you change a cached
-asset and want existing installs to pick it up immediately, bump `CACHE` in `sw.js`.
+**Run `node build.js` before committing any change to `assets/` or `data/`.** Then push
+to `main`; GitHub Pages does the rest.
+
+`build.js` writes `index.html`, `playlist.html` and the service worker's file list,
+stamping every asset URL with a hash of its contents (`app.js?v=b389a3c6`). This is not
+cosmetic. GitHub Pages serves everything with `Cache-Control: max-age=600`, so without
+the stamp a deploy can hand a browser the new HTML while it reuses the old `app.js` from
+cache for up to ten minutes — new markup driven by old code, which looks broken rather
+than merely out of date. With the stamp, new HTML can only ever request assets that
+match it, and the service worker's cache name changes with them so old caches are
+retired on activation.
+
+The one thing the stamp cannot cover is the HTML itself, which is also cached for ten
+minutes. A returning visitor may see the previous version for that long — but a
+consistent previous version, not a mixture. Ctrl+Shift+R skips it.

@@ -1,21 +1,21 @@
 // Bump this to force clients onto a fresh cache.
-const CACHE = "games-list-v1";
+const CACHE = "games-list-447151eb2f";
 
 const SHELL = [
   "./",
   "./index.html",
   "./playlist.html",
   "./manifest.webmanifest",
-  "./assets/app.css",
-  "./assets/fonts.css",
-  "./assets/app.js",
-  "./data/games.js",
+  "./assets/fonts.css?v=8ebdff78",
+  "./assets/app.css?v=76f420b6",
+  "./data/games.js?v=818a3ea1",
+  "./assets/app.js?v=b389a3c6",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
-  "./assets/fonts/press-start-2p-400-latin.woff2",
   "./assets/fonts/press-start-2p-400-latin-ext.woff2",
-  "./assets/fonts/public-sans-var-latin.woff2",
+  "./assets/fonts/press-start-2p-400-latin.woff2",
   "./assets/fonts/public-sans-var-latin-ext.woff2",
+  "./assets/fonts/public-sans-var-latin.woff2",
 ];
 
 self.addEventListener("install", e => {
