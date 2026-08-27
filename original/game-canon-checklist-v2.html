@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Canon — Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8EAED; --panel:#F7F8F9; --ink:#23262B; --muted:#6B7178;
+  --line:#C9CDD3; --accent:#C42430; --done:#557A2E; --done-tint:#EAF0DE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:'Public Sans',system-ui,sans-serif;font-size:15px;line-height:1.4}
+.wrap{max-width:720px;margin:0 auto;padding:0 12px 80px}
+header{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:2px solid var(--ink);padding:10px 12px 8px;margin:0 -12px 4px}
+.hrow{display:flex;align-items:baseline;justify-content:space-between;gap:8px;max-width:720px;margin:0 auto}
+h1{font-family:'Press Start 2P',monospace;font-size:13px;letter-spacing:.5px}
+.count{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;white-space:nowrap}
+.count b{color:var(--accent)}
+.barwrap{max-width:720px;margin:8px auto 8px}
+.bar{height:12px;border:2px solid var(--ink);background:var(--panel);position:relative;overflow:hidden}
+.bar .fill{position:absolute;inset:0;width:0%;background:repeating-linear-gradient(90deg,var(--accent) 0 7px,var(--panel) 7px 9px);transition:width .25s ease}
+@media (prefers-reduced-motion:reduce){.bar .fill{transition:none}}
+.controls{max-width:720px;margin:0 auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+input[type="search"]{flex:1;min-width:110px;font:inherit;padding:6px 8px;border:2px solid var(--ink);background:var(--panel);color:var(--ink);border-radius:0;appearance:none}
+input[type="search"]:focus{outline:2px solid var(--accent);outline-offset:1px}
+.chip{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;border:2px solid var(--ink);background:var(--panel);color:var(--ink);padding:5px 9px;cursor:pointer;border-radius:0}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.viewrow{max-width:720px;margin:8px auto 0;display:flex;gap:6px;align-items:center}
+.viewlabel{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);letter-spacing:1px}
+.decade{margin-top:22px}
+.dhead{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:2px}
+.dhead h2{font-family:'Press Start 2P',monospace;font-size:12px}
+.dcount{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.yearlabel{font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:var(--muted);margin:12px 0 2px;letter-spacing:1px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;-webkit-user-select:none}
+.row:active{background:var(--panel)}
+.box{flex:none;width:22px;height:22px;border:2px solid var(--ink);background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:transparent}
+.row.done .box{background:var(--done);border-color:var(--done);color:#fff}
+.row.done{background:var(--done-tint)}
+.row.done .title{color:var(--muted)}
+.titles{flex:1;min-width:0}
+.title{display:block}
+.method{font-size:12px;color:var(--muted);line-height:1.3;margin-top:1px}
+.time{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);min-width:30px;text-align:right}
+.rating{flex:none;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700}
+.r5{background:var(--accent);color:#fff}
+.r4{background:var(--ink);color:#fff}
+.r3{border:2px solid var(--ink);color:var(--ink)}
+.r2{border:2px solid var(--muted);color:var(--muted)}
+.r1{border:2px dashed var(--muted);color:var(--muted)}
+.empty{color:var(--muted);padding:16px 6px;font-style:italic;display:none}
+footer{margin-top:32px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+footer .chip{padding:8px 12px}
+.note{font-size:12px;color:var(--muted);width:100%;margin-top:8px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:8px 14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hrow">
+      <h1>THE CANON</h1>
+      <div class="count"><b id="nDone">0</b>/<span id="nTotal">0</span></div>
+    </div>
+    <div class="barwrap"><div class="bar"><div class="fill" id="mainFill"></div></div></div>
+    <div class="controls">
+      <input type="search" id="search" placeholder="Search titles" aria-label="Search titles">
+      <button class="chip" data-min="0" aria-pressed="true">All</button>
+      <button class="chip" data-min="3" aria-pressed="false">3+</button>
+      <button class="chip" data-min="4" aria-pressed="false">4+</button>
+      <button class="chip" data-min="5" aria-pressed="false">5</button>
+    </div>
+    <div class="viewrow">
+      <span class="viewlabel">SORT</span>
+      <button class="chip" data-view="year" aria-pressed="true">Year</button>
+      <button class="chip" data-view="console" aria-pressed="false">Console</button>
+    </div>
+  </header>
+
+  <main id="list"></main>
+  <p class="empty" id="empty">No games match.</p>
+
+  <footer>
+    <button class="chip" id="copyRemaining">Copy remaining</button>
+    <button class="chip" id="copyDone">Copy played</button>
+    <p class="note">Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Progress saves automatically.</p>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// [year, title, rating, best way to play, console group]
+const DATA = [
+[1972,"Pong",5,"MAME (arcade)","Arcade","∞"],
+[1978,"Space Invaders",5,"MAME (arcade)","Arcade","1h"],
+[1979,"Asteroids",4,"MAME (arcade)","Arcade","1h"],
+[1980,"Pac-Man",5,"MAME (arcade)","Arcade","1h"],
+[1980,"Zork I",4,"PC — free / GOG","DOS","7h"],
+[1980,"Rogue",5,"PC — free modern ports","PC (Other)","10h"],
+[1981,"Donkey Kong",5,"MAME (arcade)","Arcade","1h"],
+[1981,"Galaga",4,"MAME (arcade)","Arcade","1h"],
+[1981,"Wizardry",4,"2024 remake (PC/Switch)","PC (Steam)","15h"],
+[1982,"Ms. Pac-Man",3,"MAME (arcade)","Arcade","1h"],
+[1982,"Pitfall!",4,"Stella (Atari 2600)","Atari 2600","1h"],
+[1984,"Tetris",5,"NSO (Game Boy)","Switch (NSO)","∞"],
+[1984,"Elite",4,"DOSBox, or free ports","DOS","∞"],
+[1985,"Super Mario Bros.",5,"NSO (NES)","Switch (NSO)","2h"],
+[1985,"Ultima IV",4,"DOSBox — free on GOG","DOS","25h"],
+[1986,"The Legend of Zelda",5,"NSO (NES)","Switch (NSO)","8h"],
+[1986,"Metroid",5,"Zero Mission remake — NSO (GBA)","Switch (NSO)","6h"],
+[1986,"Dragon Quest",5,"HD-2D remake (PC/Switch)","PC (Steam)","12h"],
+[1986,"Castlevania",4,"Mesen (NES)","NES","5h"],
+[1987,"Final Fantasy",5,"Pixel Remaster (PC/Switch)","PC (Steam)","18h"],
+[1987,"Metal Gear",4,"openMSX (MSX2)","MSX","5h"],
+[1987,"Contra",4,"Mesen (NES)","NES","1h"],
+[1987,"Punch-Out!!",3,"NSO (NES) — Mesen for Tyson ver.","Switch (NSO)","5h"],
+[1988,"Super Mario Bros. 3",5,"NSO (NES)","Switch (NSO)","10h"],
+[1988,"Mega Man 2",4,"Mesen (NES)","NES","5h"],
+[1988,"Ninja Gaiden",3,"NSO (NES)","Switch (NSO)","5h"],
+[1989,"SimCity",5,"NSO (SNES)","Switch (NSO)","∞"],
+[1989,"Prince of Persia",4,"DOSBox (DOS)","DOS","2h"],
+[1990,"Super Mario World",5,"NSO (SNES)","Switch (NSO)","10h"],
+[1990,"The Secret of Monkey Island",5,"Special Edition (PC)","PC (Steam)","6h"],
+[1991,"The Legend of Zelda: A Link to the Past",5,"NSO (SNES)","Switch (NSO)","15h"],
+[1991,"Sonic the Hedgehog",5,"BlastEm / RetroArch (Genesis)","Genesis","2h"],
+[1991,"Street Fighter II",5,"MAME (arcade)","Arcade","1h"],
+[1991,"Civilization",5,"DOSBox (DOS)","DOS","∞"],
+[1991,"Final Fantasy IV",4,"Snes9x (SNES)","SNES","23h"],
+[1992,"Super Mario Kart",5,"NSO (SNES)","Switch (NSO)","3h"],
+[1992,"Mortal Kombat",4,"MAME (arcade)","Arcade","1h"],
+[1993,"Doom",5,"PC — GZDoom, or 2024 rerelease","PC (Steam)","5h"],
+[1993,"Myst",5,"2021 remake (PC)","PC (Steam)","7h"],
+[1993,"NBA Jam",3,"MAME (arcade)","Arcade","1h"],
+[1994,"Super Metroid",5,"NSO (SNES)","Switch (NSO)","8h"],
+[1994,"Final Fantasy VI",5,"Snes9x (SNES)","SNES","35h"],
+[1994,"EarthBound",4,"NSO (SNES)","Switch (NSO)","30h"],
+[1994,"Donkey Kong Country",3,"NSO (SNES)","Switch (NSO)","6h"],
+[1994,"X-COM: UFO Defense",5,"PC — OpenXcom","PC (Steam)","30h"],
+[1994,"System Shock",3,"2023 remake, or Enhanced Ed. (PC)","PC (Steam)","17h"],
+[1994,"Sonic 3 & Knuckles",3,"Sonic 3 A.I.R. (free PC port)","PC (Other)","5h"],
+[1994,"Tekken",3,"DuckStation (PS1)","PS1","1h"],
+[1995,"Chrono Trigger",5,"Snes9x (SNES)","SNES","23h"],
+[1995,"Yoshi's Island",4,"NSO (SNES)","Switch (NSO)","12h"],
+[1995,"Command & Conquer",4,"Remastered Collection (PC)","PC (Steam)","15h"],
+[1996,"Super Mario 64",5,"Native PC port","PC (Other)","12h"],
+[1996,"Pokémon Red/Blue",5,"mGBA (Game Boy)","Game Boy","30h"],
+[1996,"Quake",5,"2021 rerelease (PC)","PC (Steam)","5h"],
+[1996,"Resident Evil",5,"REmake HD (PC/Switch)","PC (Steam)","9h"],
+[1996,"Tomb Raider",4,"I–III Remastered (PC/Switch)","PC (Steam)","13h"],
+[1996,"Diablo",5,"GOG, or DevilutionX","PC (Other)","14h"],
+[1997,"Final Fantasy VII",5,"PC (Steam + mods)","PC (Steam)","37h"],
+[1997,"GoldenEye 007",5,"NSO (N64) — emu for mouse aim","Switch (NSO)","5h"],
+[1997,"Castlevania: Symphony of the Night",5,"DuckStation (PS1)","PS1","11h"],
+[1997,"Star Fox 64",3,"NSO (N64)","Switch (NSO)","2h"],
+[1997,"Fallout",5,"PC (GOG/Steam)","PC (Steam)","17h"],
+[1997,"Gran Turismo",4,"DuckStation (PS1)","PS1","25h"],
+[1997,"Ultima Online",4,"PC — live, or free shards","PC (Other)","∞"],
+[1998,"The Legend of Zelda: Ocarina of Time",5,"Ship of Harkinian (PC port)","PC (Other)","27h"],
+[1998,"Half-Life",5,"PC (Steam)","PC (Steam)","12h"],
+[1998,"Metal Gear Solid",5,"DuckStation (PS1)","PS1","12h"],
+[1998,"StarCraft",5,"Remastered (Battle.net)","PC (Other)","25h"],
+[1998,"Resident Evil 2",4,"DuckStation (PS1)","PS1","8h"],
+[1998,"Baldur's Gate",4,"Enhanced Edition (PC)","PC (Steam)","27h"],
+[1998,"Grim Fandango",4,"Remastered — Switch or PC","Switch 2","9h"],
+[1998,"Banjo-Kazooie",3,"NSO (N64)","Switch (NSO)","11h"],
+[1998,"Thief: The Dark Project",4,"Thief Gold + TFix (PC)","PC (Steam)","12h"],
+[1998,"Fallout 2",3,"PC (GOG/Steam)","PC (Steam)","30h"],
+[1999,"Super Smash Bros.",3,"simple64 (N64)","N64","∞"],
+[1999,"EverQuest",4,"PC — Project 1999 servers","PC (Other)","∞"],
+[1999,"Age of Empires II",4,"Definitive Edition (PC)","PC (Steam)","∞"],
+[1999,"Planescape: Torment",5,"Enhanced Ed. — Switch or PC","Switch 2","30h"],
+[1999,"System Shock 2",4,"25th Anniv. Remaster (PC)","PC (Steam)","14h"],
+[1999,"Tony Hawk's Pro Skater",5,"THPS 1+2 remake — PC (Switch is 30fps)","PC (Steam)","5h"],
+[2000,"Deus Ex",5,"PC (GOG + Revision mod)","PC (Steam)","24h"],
+[2000,"Diablo II",5,"Resurrected (Battle.net/Switch)","PC (Other)","18h"],
+[2000,"The Sims",5,"Legacy Collection (PC)","PC (Steam)","∞"],
+[2000,"The Legend of Zelda: Majora's Mask",4,"MM Recomp (PC port)","PC (Other)","20h"],
+[2000,"Baldur's Gate II",5,"Enhanced Edition (PC)","PC (Steam)","50h"],
+[2000,"Jet Set Radio",3,"PC (Steam)","PC (Steam)","8h"],
+[2001,"Grand Theft Auto III",5,"PC (orig + mods)","PC (Other)","15h"],
+[2001,"Halo: Combat Evolved",5,"Master Chief Collection (PC)","PC (Steam)","10h"],
+[2001,"Metal Gear Solid 2",4,"RPCS3 (HD Collection)","PS3","13h"],
+[2001,"Silent Hill 2",5,"PC + Enhanced Edition mod","PC (Other)","8h"],
+[2001,"Super Smash Bros. Melee",5,"Dolphin + Slippi","GameCube","∞"],
+[2001,"Devil May Cry",4,"PCSX2 (PS2)","PS2","8h"],
+[2001,"Ico",4,"RPCS3 (PS3 HD)","PS3","6h"],
+[2001,"Final Fantasy X",4,"HD Remaster — Switch or PC (30fps everywhere)","Switch 2","45h"],
+[2001,"Advance Wars",3,"Switch (1+2 Re-Boot Camp remake) or mGBA","Switch 2","25h"],
+[2001,"Animal Crossing",4,"Dolphin (GameCube)","GameCube","∞"],
+[2001,"Pikmin",3,"Dolphin (GameCube)","GameCube","6h"],
+[2002,"Metroid Prime",5,"Switch (Prime Remastered, 60fps)","Switch 2","14h"],
+[2002,"Grand Theft Auto: Vice City",3,"PC (orig + mods)","PC (Other)","18h"],
+[2002,"The Elder Scrolls III: Morrowind",5,"PC — OpenMW","PC (Steam)","45h"],
+[2002,"Warcraft III",5,"Reforged (Battle.net)","PC (Other)","30h"],
+[2002,"Kingdom Hearts",3,"HD 1.5+2.5 ReMIX (PC)","PC (Steam)","30h"],
+[2003,"The Legend of Zelda: The Wind Waker",4,"Cemu (Wind Waker HD) — GameCube NSO has the SD original","Wii U","26h"],
+[2003,"Star Wars: Knights of the Old Republic",5,"PC (Steam)","PC (Steam)","30h"],
+[2003,"Prince of Persia: The Sands of Time",4,"GOG","PC (Other)","8h"],
+[2003,"Call of Duty",3,"PC","PC (Steam)","6h"],
+[2004,"Half-Life 2",5,"PC (20th anniv. update)","PC (Steam)","13h"],
+[2004,"Grand Theft Auto: San Andreas",5,"PC (orig + mods)","PC (Other)","31h"],
+[2004,"World of Warcraft",5,"WoW Classic (Battle.net)","PC (Other)","∞"],
+[2004,"Halo 2",4,"Master Chief Collection (PC)","PC (Steam)","9h"],
+[2004,"Metal Gear Solid 3",5,"Delta remake (PC), or Master Collection","PC (Steam)","16h"],
+[2004,"Katamari Damacy",4,"PCSX2 (PS2)","PS2","6h"],
+[2004,"Paper Mario: The Thousand-Year Door",4,"Switch remake (30fps, Switch-only)","Switch 2","30h"],
+[2005,"Resident Evil 4",5,"PC + HD Project mod","PC (Steam)","16h"],
+[2005,"Shadow of the Colossus",5,"RPCS3 (PS3 HD)","PS3","7h"],
+[2005,"God of War",4,"RPCS3 (PS3 HD)","PS3","9h"],
+[2005,"Psychonauts",3,"PC","PC (Steam)","12h"],
+[2005,"Civilization IV",4,"PC","PC (Steam)","∞"],
+[2005,"Guitar Hero",4,"PCSX2 (PS2) + guitar","PS2","6h"],
+[2006,"Wii Sports",5,"Dolphin (Wii) + Wiimote","Wii","∞"],
+[2006,"The Legend of Zelda: Twilight Princess",3,"Cemu (TP HD)","Wii U","34h"],
+[2006,"Gears of War",4,"Reloaded (PC)","PC (Steam)","8h"],
+[2006,"The Elder Scrolls IV: Oblivion",4,"Remastered (PC)","PC (Steam)","28h"],
+[2006,"Okami",3,"Okami HD (PC/Switch)","PC (Steam)","37h"],
+[2007,"BioShock",5,"Remastered (PC)","PC (Steam)","12h"],
+[2007,"Portal",5,"PC","PC (Steam)","3h"],
+[2007,"Super Mario Galaxy",5,"Switch (Galaxy 1+2, 60fps; 4K on Switch 2)","Switch 2","13h"],
+[2007,"Call of Duty 4: Modern Warfare",5,"PC (original)","PC (Steam)","7h"],
+[2007,"Halo 3",4,"Master Chief Collection (PC)","PC (Steam)","9h"],
+[2007,"Mass Effect",4,"Legendary Edition (PC)","PC (Steam)","17h"],
+[2007,"Team Fortress 2",4,"PC — free","PC (Steam)","∞"],
+[2007,"Crysis",3,"PC","PC (Steam)","9h"],
+[2007,"S.T.A.L.K.E.R.: Shadow of Chernobyl",4,"PC (GOG + mods)","PC (Steam)","16h"],
+[2007,"Persona 3",4,"Reload remake — PC (Switch 2 is 60fps docked only)","PC (Steam)","60h"],
+[2008,"Grand Theft Auto IV",5,"PC (+ mods)","PC (Steam)","26h"],
+[2008,"Fallout 3",5,"PC (+ patches)","PC (Steam)","23h"],
+[2008,"Metal Gear Solid 4",3,"RPCS3 (PS3)","PS3","18h"],
+[2008,"Left 4 Dead",4,"PC — via L4D2","PC (Steam)","10h"],
+[2008,"Dead Space",4,"2023 remake (PC)","PC (Steam)","12h"],
+[2008,"Braid",4,"Anniversary Ed. — Switch or PC","Switch 2","5h"],
+[2008,"LittleBigPlanet",3,"RPCS3 (PS3)","PS3","9h"],
+[2009,"Uncharted 2: Among Thieves",5,"RPCS3 (PS3)","PS3","10h"],
+[2009,"Batman: Arkham Asylum",5,"PC","PC (Steam)","12h"],
+[2009,"Demon's Souls",5,"RPCS3 (PS3)","PS3","25h"],
+[2009,"Assassin's Creed II",1,"PC","PC (Steam)","19h"],
+[2009,"League of Legends",4,"Riot client — free","PC (Other)","∞"],
+[2010,"Red Dead Redemption",5,"PC (2024 port)","PC (Steam)","18h"],
+[2010,"Mass Effect 2",5,"Legendary Edition (PC)","PC (Steam)","25h"],
+[2010,"StarCraft II",4,"Battle.net — free","PC (Other)","25h"],
+[2010,"Super Mario Galaxy 2",3,"Switch (Galaxy 1+2, 60fps; 4K on Switch 2)","Switch 2","12h"],
+[2010,"Fallout: New Vegas",5,"PC (+ patches)","PC (Steam)","28h"],
+[2010,"Limbo",3,"PC/Switch","PC (Steam)","4h"],
+[2010,"Super Meat Boy",3,"PC/Switch","PC (Steam)","10h"],
+[2010,"Amnesia: The Dark Descent",4,"PC","PC (Steam)","8h"],
+[2010,"Civilization V",4,"PC","PC (Steam)","∞"],
+[2010,"God of War III",1,"RPCS3 (PS3)","PS3","10h"],
+[2010,"Bayonetta",3,"PC (Steam)","PC (Steam)","11h"],
+[2010,"Xenoblade Chronicles",3,"Switch (Definitive Ed., 30fps, Switch-only)","Switch 2","60h"],
+[2011,"The Elder Scrolls V: Skyrim",5,"PC (Special Ed. + mods)","PC (Steam)","34h"],
+[2011,"Dark Souls",5,"Remastered (PC)","PC (Steam)","40h"],
+[2011,"Portal 2",5,"PC","PC (Steam)","8h"],
+[2011,"Minecraft: Java Edition",5,"minecraft.net launcher","PC (Other)","∞"],
+[2011,"Batman: Arkham City",4,"PC","PC (Steam)","20h"],
+[2011,"Terraria",4,"PC","PC (Steam)","50h"],
+[2012,"Journey",5,"PC (Steam)","PC (Steam)","2h"],
+[2012,"The Walking Dead",4,"Definitive Series (PC)","PC (Steam)","13h"],
+[2012,"XCOM: Enemy Unknown",4,"PC","PC (Steam)","30h"],
+[2012,"Dishonored",4,"PC","PC (Steam)","12h"],
+[2012,"Hotline Miami",3,"PC","PC (Steam)","5h"],
+[2012,"FTL: Faster Than Light",4,"PC","PC (Steam)","14h"],
+[2012,"Spelunky",4,"PC","PC (Steam)","10h"],
+[2012,"Persona 4 Golden",2,"PC (Steam)","PC (Steam)","70h"],
+[2013,"The Last of Us",5,"Part I remake (PC)","PC (Steam)","15h"],
+[2013,"Grand Theft Auto V",5,"PC","PC (Steam)","32h"],
+[2013,"BioShock Infinite",3,"PC","PC (Steam)","12h"],
+[2013,"Papers, Please",5,"PC","PC (Steam)","5h"],
+[2013,"Super Mario 3D World",1,"Switch (+ Bowser's Fury, 60fps)","Switch 2","11h"],
+[2013,"Dota 2",4,"PC — free","PC (Steam)","∞"],
+[2013,"The Stanley Parable",3,"Ultra Deluxe — Switch or PC","Switch 2","3h"],
+[2013,"Animal Crossing: New Leaf",2,"Azahar (3DS)","3DS","∞"],
+[2014,"Dark Souls II",1,"Scholar of the First Sin (PC)","PC (Steam)","45h"],
+[2014,"Mario Kart 8 Deluxe",4,"Switch (60fps)","Switch 2","∞"],
+[2014,"Shovel Knight",3,"Treasure Trove — Switch or PC","Switch 2","6h"],
+[2014,"Alien: Isolation",3,"PC","PC (Steam)","19h"],
+[2015,"The Witcher 3: Wild Hunt",5,"PC (next-gen update)","PC (Steam)","50h"],
+[2015,"Bloodborne",5,"shadPS4 (PS4)","PS4","34h"],
+[2015,"Metal Gear Solid V",4,"PC","PC (Steam)","45h"],
+[2015,"Undertale",5,"Switch or PC","Switch 2","6h"],
+[2015,"Rocket League",4,"Epic — free","PC (Other)","∞"],
+[2015,"Ori and the Blind Forest",3,"Definitive Ed. — Switch (60fps) or PC","Switch 2","9h"],
+[2015,"Life Is Strange",1,"Remastered (PC)","PC (Steam)","14h"],
+[2015,"Cities: Skylines",3,"PC","PC (Steam)","∞"],
+[2016,"Overwatch",4,"PC — as Overwatch 2","PC (Steam)","∞"],
+[2016,"Doom",5,"PC","PC (Steam)","11h"],
+[2016,"Dark Souls III",4,"PC","PC (Steam)","32h"],
+[2016,"Uncharted 4: A Thief's End",4,"Legacy of Thieves (PC)","PC (Steam)","15h"],
+[2016,"Stardew Valley",5,"Switch (60fps) or PC","Switch 2","∞"],
+[2016,"Inside",4,"PC/Switch","PC (Steam)","4h"],
+[2016,"Titanfall 2",4,"PC","PC (Steam)","6h"],
+[2016,"Hitman World of Assassination",3,"PC (Switch 2 can't hold 60)","PC (Steam)","40h"],
+[2016,"Dishonored 2",2,"PC","PC (Steam)","13h"],
+[2017,"The Legend of Zelda: Breath of the Wild",5,"Switch 2 Edition (60fps)","Switch 2","50h"],
+[2017,"Super Mario Odyssey",5,"Switch (60fps, free Switch 2 update)","Switch 2","13h"],
+[2017,"Persona 5 Royal",5,"PC (Switch is 30fps, no Switch 2 patch)","PC (Steam)","100h"],
+[2017,"NieR: Automata",5,"PC","PC (Steam)","35h"],
+[2017,"Hollow Knight",5,"Switch (60fps) or PC","Switch 2","27h"],
+[2017,"Cuphead",4,"Switch (60fps) or PC","Switch 2","11h"],
+[2017,"Horizon Zero Dawn",3,"Remastered (PC)","PC (Steam)","23h"],
+[2017,"Divinity: Original Sin 2",5,"Definitive Ed. — PC (Switch is 30fps)","PC (Steam)","60h"],
+[2017,"PUBG: Battlegrounds",4,"PC — free","PC (Steam)","∞"],
+[2017,"Fortnite",5,"Epic — free","PC (Other)","∞"],
+[2017,"Resident Evil 7",4,"PC","PC (Steam)","9h"],
+[2017,"What Remains of Edith Finch",4,"Switch or PC","Switch 2","2h"],
+[2017,"Prey",3,"PC","PC (Steam)","17h"],
+[2018,"God of War",5,"PC","PC (Steam)","21h"],
+[2018,"Red Dead Redemption 2",5,"PC","PC (Steam)","50h"],
+[2018,"Celeste",5,"Switch (60fps) or PC","Switch 2","8h"],
+[2018,"Return of the Obra Dinn",5,"Switch or PC","Switch 2","8h"],
+[2018,"Into the Breach",4,"Switch or PC","Switch 2","12h"],
+[2018,"Monster Hunter: World",4,"PC","PC (Steam)","50h"],
+[2018,"Marvel's Spider-Man",3,"Remastered (PC)","PC (Steam)","17h"],
+[2018,"Super Smash Bros. Ultimate",4,"Switch (60fps)","Switch 2","∞"],
+[2018,"Subnautica",4,"PC","PC (Steam)","30h"],
+[2018,"Tetris Effect",3,"Connected — Switch (60fps) or PC","Switch 2","3h"],
+[2019,"Sekiro: Shadows Die Twice",5,"PC","PC (Steam)","30h"],
+[2019,"Disco Elysium",5,"Final Cut — PC (Switch port is 30fps)","PC (Steam)","22h"],
+[2019,"Resident Evil 2 (remake)",3,"PC","PC (Steam)","9h"],
+[2019,"Outer Wilds",5,"PC","PC (Steam)","17h"],
+[2019,"Control",3,"Ultimate Edition (PC)","PC (Steam)","12h"],
+[2019,"Death Stranding",3,"Director's Cut (PC)","PC (Steam)","40h"],
+[2019,"Slay the Spire",5,"Switch or PC","Switch 2","25h"],
+[2019,"Baba Is You",4,"Switch or PC","Switch 2","20h"],
+[2020,"Hades",5,"Switch (60fps) or PC","Switch 2","22h"],
+[2020,"The Last of Us Part II",4,"Remastered (PC)","PC (Steam)","24h"],
+[2020,"Half-Life: Alyx",5,"PC — VR headset required","PC (Steam)","12h"],
+[2020,"Doom Eternal",3,"PC","PC (Steam)","14h"],
+[2020,"Ghost of Tsushima",3,"Director's Cut (PC)","PC (Steam)","25h"],
+[2020,"Final Fantasy VII Remake",1,"Intergrade (PC)","PC (Steam)","33h"],
+[2020,"Ori and the Will of the Wisps",3,"Switch (60fps) or PC","Switch 2","11h"],
+[2020,"Crusader Kings III",4,"PC","PC (Steam)","∞"],
+[2020,"Cyberpunk 2077",2,"PC (2.x + Phantom Liberty; Switch 2 is 30–40fps)","PC (Steam)","25h"],
+[2021,"Metroid Dread",4,"Switch (60fps)","Switch 2","8h"],
+[2021,"It Takes Two",4,"PC (Switch is 30fps)","PC (Steam)","14h"],
+[2021,"Resident Evil Village",2,"PC","PC (Steam)","9h"],
+[2021,"Returnal",3,"PC","PC (Steam)","20h"],
+[2021,"Inscryption",4,"Switch or PC","Switch 2","13h"],
+[2022,"Elden Ring",5,"PC (Switch 2 Tarnished Ed. is 30fps)","PC (Steam)","60h"],
+[2022,"God of War Ragnarök",3,"PC","PC (Steam)","26h"],
+[2022,"Xenoblade Chronicles 3",2,"Switch (30fps, Switch-only)","Switch 2","60h"],
+[2023,"Baldur's Gate 3",5,"PC","PC (Steam)","75h"],
+[2023,"The Legend of Zelda: Tears of the Kingdom",5,"Switch 2 Edition (60fps)","Switch 2","60h"],
+[2023,"Alan Wake 2",4,"Epic","PC (Other)","20h"],
+[2023,"Resident Evil 4 (remake)",1,"PC","PC (Steam)","16h"],
+[2023,"Super Mario Bros. Wonder",3,"Switch (60fps)","Switch 2","10h"],
+[2023,"Street Fighter 6",4,"PC (Switch 2 is 60fps with visual cuts, fine for portable)","PC (Steam)","∞"],
+[2024,"Balatro",5,"Switch or PC","Switch 2","30h"],
+[2024,"Astro Bot",4,"PS5 only — no PC option","PS5","13h"],
+[2025,"Clair Obscur: Expedition 33",4,"PC","PC (Steam)","33h"],
+[2025,"Hollow Knight: Silksong",4,"Switch 2 (60fps) or PC","Switch 2","35h"],
+[2025,"Hades II",3,"Switch 2 (60fps) or PC","Switch 2","30h"],
+[2025,"Blue Prince",3,"PC","PC (Steam)","25h"]
+];
+
+const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Game Boy","Genesis","SNES","DOS","PS1","N64","GBA","GameCube","PS2","Wii","PS3","3DS","Wii U","PS4","Switch (NSO)","Switch 2","PS5","PC (Steam)","PC (Other)"];
+
+const STORAGE_KEY = "canon-checklist-v1";
+const keyOf = g => g[0] + "|" + g[1];
+let checked = new Set();
+let minRating = 0;
+let query = "";
+let view = "year";
+let saveTimer = null;
+let sections = []; // {indices, countEl, secEl}
+
+const list = document.getElementById("list");
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+function makeRow(i, showYearInMethod){
+  const g = DATA[i];
+  const row = document.createElement("div");
+  row.className = "row";
+  row.dataset.i = i;
+  row.setAttribute("role","checkbox");
+  row.setAttribute("aria-checked","false");
+  row.setAttribute("tabindex","0");
+  const method = showYearInMethod ? (g[0] + " · " + g[3]) : g[3];
+  row.innerHTML =
+    "<div class='box'>&#10003;</div>" +
+    "<div class='titles'><span class='title'>" + esc(g[1]) + "</span>" +
+    "<div class='method'>" + esc(method) + "</div></div>" +
+      "<div class='time'>" + esc(g[5]) + "</div>" +
+    "<div class='rating r" + g[2] + "'>" + g[2] + "</div>";
+  row.addEventListener("click", () => toggle(i, row));
+  row.addEventListener("keydown", e => {
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(i, row); }
+  });
+  return row;
+}
+
+function makeSection(label, indices, showYearInMethod, yearLabels){
+  const sec = document.createElement("section");
+  sec.className = "decade";
+  const head = document.createElement("div");
+  head.className = "dhead";
+  const countEl = document.createElement("span");
+  countEl.className = "dcount";
+  head.innerHTML = "<h2>" + esc(label) + "</h2>";
+  head.appendChild(countEl);
+  sec.appendChild(head);
+
+  let lastYear = null;
+  for (const i of indices) {
+    if (yearLabels && DATA[i][0] !== lastYear) {
+      lastYear = DATA[i][0];
+      const yl = document.createElement("div");
+      yl.className = "yearlabel";
+      yl.textContent = lastYear;
+      sec.appendChild(yl);
+    }
+    sec.appendChild(makeRow(i, showYearInMethod));
+  }
+  list.appendChild(sec);
+  sections.push({indices, countEl, secEl: sec});
+}
+
+function render(){
+  list.innerHTML = "";
+  sections = [];
+  if (view === "year") {
+    const groups = {};
+    DATA.forEach((g,i) => {
+      const d = Math.floor(g[0]/10)*10;
+      (groups[d] = groups[d] || []).push(i);
+    });
+    for (const d of Object.keys(groups).sort((a,b)=>a-b)) {
+      makeSection(d + "s", groups[d], false, true);
+    }
+  } else {
+    const groups = {};
+    DATA.forEach((g,i) => {
+      (groups[g[4]] = groups[g[4]] || []).push(i);
+    });
+    for (const c of CONSOLE_ORDER) {
+      if (groups[c]) makeSection(c, groups[c], true, false);
+    }
+  }
+  applyChecked();
+  applyFilter();
+}
+
+function toggle(i, row){
+  const k = keyOf(DATA[i]);
+  if (checked.has(k)) checked.delete(k); else checked.add(k);
+  row.classList.toggle("done", checked.has(k));
+  row.setAttribute("aria-checked", checked.has(k) ? "true" : "false");
+  updateCounts();
+  scheduleSave();
+}
+
+function updateCounts(){
+  const done = DATA.filter(g => checked.has(keyOf(g))).length;
+  document.getElementById("nDone").textContent = done;
+  document.getElementById("mainFill").style.width = (done / DATA.length * 100) + "%";
+  for (const s of sections) {
+    const dd = s.indices.filter(i => checked.has(keyOf(DATA[i]))).length;
+    s.countEl.textContent = dd + "/" + s.indices.length;
+  }
+}
+
+function applyChecked(){
+  document.querySelectorAll(".row").forEach(row => {
+    const on = checked.has(keyOf(DATA[row.dataset.i]));
+    row.classList.toggle("done", on);
+    row.setAttribute("aria-checked", on ? "true" : "false");
+  });
+  updateCounts();
+}
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 400);
+}
+async function save(){
+  try {
+    if (window.storage) {
+      await window.storage.set(STORAGE_KEY, JSON.stringify([...checked]));
+    }
+  } catch(e){ console.error("Save failed", e); }
+}
+async function load(){
+  try {
+    if (window.storage) {
+      const res = await window.storage.get(STORAGE_KEY);
+      if (res && res.value) checked = new Set(JSON.parse(res.value));
+    }
+  } catch(e){ /* first run */ }
+  applyChecked();
+}
+
+function matches(g){
+  return g[2] >= minRating && (!query || g[1].toLowerCase().includes(query));
+}
+
+function applyFilter(){
+  let visible = 0;
+  document.querySelectorAll(".row").forEach(row => {
+    const show = matches(DATA[row.dataset.i]);
+    row.style.display = show ? "" : "none";
+    if (show) visible++;
+  });
+  document.querySelectorAll(".yearlabel").forEach(yl => {
+    let el = yl.nextElementSibling, any = false;
+    while (el && el.classList.contains("row")) {
+      if (el.style.display !== "none") { any = true; break; }
+      el = el.nextElementSibling;
+    }
+    yl.style.display = any ? "" : "none";
+  });
+  for (const s of sections) {
+    s.secEl.style.display = s.indices.some(i => matches(DATA[i])) ? "" : "none";
+  }
+  document.getElementById("empty").style.display = visible ? "none" : "block";
+}
+
+document.getElementById("search").addEventListener("input", e => {
+  query = e.target.value.trim().toLowerCase();
+  applyFilter();
+});
+document.querySelectorAll(".chip[data-min]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    minRating = +btn.dataset.min;
+    document.querySelectorAll(".chip[data-min]").forEach(b =>
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    applyFilter();
+  });
+});
+document.querySelectorAll(".chip[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (view === btn.dataset.view) return;
+    view = btn.dataset.view;
+    document.querySelectorAll(".chip[data-view]").forEach(b =>
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    render();
+  });
+});
+
+function copyList(done){
+  const lines = DATA
+    .filter(g => checked.has(keyOf(g)) === done)
+    .map(g => g[1] + " (" + g[0] + ")");
+  const text = lines.join("\n");
+  const finish = () => showToast(lines.length + " titles copied");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(finish).catch(() => fallbackCopy(text, finish));
+  } else {
+    fallbackCopy(text, finish);
+  }
+}
+function fallbackCopy(text, cb){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); cb(); } catch(e){ showToast("Copy failed"); }
+  document.body.removeChild(ta);
+}
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+document.getElementById("copyRemaining").addEventListener("click", () => copyList(false));
+document.getElementById("copyDone").addEventListener("click", () => copyList(true));
+
+document.getElementById("nTotal").textContent = DATA.length;
+render();
+load();
+</script>
+</body>
+</html>

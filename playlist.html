@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Playlist (Full) — Worth Playing Today</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="sr-only">The Playlist (Full)</h1>
+    <div class="hrow">
+      <nav class="tabs" aria-label="Lists">
+        <a class="tab" href="./">CANON</a>
+        <a class="tab" href="./playlist.html" aria-current="page">PLAYLIST</a>
+      </nav>
+      <div class="count"><b id="nDone">0</b>/<span id="nTotal">0</span></div>
+    </div>
+    <div class="barwrap"><div class="bar"><div class="fill" id="mainFill"></div></div></div>
+    <div class="controls">
+      <input type="search" id="search" placeholder="Search titles" aria-label="Search titles">
+      <button class="chip" data-min="0" aria-pressed="true">All</button>
+      <button class="chip" data-min="3" aria-pressed="false">3+</button>
+      <button class="chip" data-min="4" aria-pressed="false">4+</button>
+      <button class="chip" data-min="5" aria-pressed="false">5</button>
+    </div>
+    <div class="viewrow">
+      <span class="viewlabel">SORT</span>
+      <button class="chip" data-view="year" aria-pressed="true">Year</button>
+      <button class="chip" data-view="console" aria-pressed="false">Console</button>
+    </div>
+  </header>
+
+  <main id="list"></main>
+  <p class="empty" id="empty">No games match.</p>
+
+  <footer>
+    <button class="chip" id="copyRemaining">Copy remaining</button>
+    <button class="chip" id="copyDone">Copy played</button>
+    <p class="note">The playlist: everything from the canon that still holds up today, plus a handful of additions. Console view groups Switch 2 buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade. Progress is shared with the canon list and saves automatically.</p>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="data/playlist.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
