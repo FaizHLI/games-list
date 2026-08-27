@@ -1,5 +1,7 @@
-const DATA = window.DATA;
-const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Game Boy","Genesis","SNES","DOS","PS1","N64","GBA","GameCube","PS2","Wii","PS3","3DS","Wii U","PS4","Switch (NSO)","Switch 2","PS5","PC (Steam)","PC (Other)"];
+// The playlist is a derived view of the same data: the games flagged in field 7.
+const LIST = document.body.dataset.list || "canon";
+const DATA = LIST === "playlist" ? window.GAMES.filter(g => g[6]) : window.GAMES;
+const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Game Boy","Genesis","SNES","DOS","PS1","N64","GBA","GameCube","PS2","DS","Wii","PS3","3DS","Wii U","PS4","Switch (NSO)","Switch 2","PS5","PC (Steam)","PC (Other)"];
 
 const STORAGE_KEY = "games-list-progress-v1";
 const keyOf = g => g[0] + "|" + g[1];
