@@ -3,16 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Playlist (Full) — Worth Playing Today</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<title>The Playlist — Worth Playing Today</title>
+<meta name="description" content="The games from the canon that still hold up today.">
+<meta name="theme-color" content="#E8EAED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15171A" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="preload" href="assets/fonts/public-sans-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/press-start-2p-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/fonts.css">
 <link rel="stylesheet" href="assets/app.css">
+<script>/* set an explicit theme before first paint so the choice never flashes */
+try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 </head>
 <body data-list="playlist">
 <div class="wrap">
   <header>
-    <h1 class="sr-only">The Playlist (Full)</h1>
+    <h1 class="sr-only">The Playlist</h1>
     <div class="hrow">
       <nav class="tabs" aria-label="Lists">
         <a class="tab" href="./">CANON</a>
@@ -20,18 +28,39 @@
       </nav>
       <div class="count"><b id="nDone">0</b>/<span id="nTotal">0</span></div>
     </div>
-    <div class="barwrap"><div class="bar"><div class="fill" id="mainFill"></div></div></div>
+    <div class="barwrap"><div class="bar"><div class="fill" id="mainFill"></div><div class="playfill" id="playFill"></div></div></div>
+    <p class="stats" id="stats"></p>
     <div class="controls">
       <input type="search" id="search" placeholder="Search titles" aria-label="Search titles">
-      <button class="chip" data-min="0" aria-pressed="true">All</button>
-      <button class="chip" data-min="3" aria-pressed="false">3+</button>
-      <button class="chip" data-min="4" aria-pressed="false">4+</button>
-      <button class="chip" data-min="5" aria-pressed="false">5</button>
+      <button class="chip" type="button" data-min="0" aria-pressed="true">All</button>
+      <button class="chip" type="button" data-min="3" aria-pressed="false">3+</button>
+      <button class="chip" type="button" data-min="4" aria-pressed="false">4+</button>
+      <button class="chip" type="button" data-min="5" aria-pressed="false">5</button>
+      <button class="chip" type="button" id="shuffle">Pick one</button>
+      <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel">More</button>
     </div>
-    <div class="viewrow">
-      <span class="viewlabel">SORT</span>
-      <button class="chip" data-view="year" aria-pressed="true">Year</button>
-      <button class="chip" data-view="console" aria-pressed="false">Console</button>
+    <div class="panel" id="panel" hidden>
+      <div class="frow">
+        <span class="flabel" id="lblTime">TIME</span>
+        <button class="chip" type="button" data-time="0" aria-pressed="true">Any</button>
+        <button class="chip" type="button" data-time="5" aria-pressed="false">5h or less</button>
+        <button class="chip" type="button" data-time="10" aria-pressed="false">10h or less</button>
+        <button class="chip" type="button" data-time="20" aria-pressed="false">20h or less</button>
+      </div>
+      <div class="frow">
+        <span class="flabel">PLATFORM</span>
+        <select id="platform" aria-label="Filter by platform"><option value="">All platforms</option></select>
+      </div>
+      <div class="frow">
+        <span class="flabel">SORT</span>
+        <button class="chip" type="button" data-view="year" aria-pressed="true">Year</button>
+        <button class="chip" type="button" data-view="console" aria-pressed="false">Console</button>
+        <button class="chip" type="button" data-view="rating" aria-pressed="false">Rating</button>
+      </div>
+      <div class="frow">
+        <span class="flabel">SHOW</span>
+        <button class="chip" type="button" id="hideDone" aria-pressed="false">Hide played</button>
+      </div>
     </div>
   </header>
 
@@ -39,12 +68,16 @@
   <p class="empty" id="empty">No games match.</p>
 
   <footer>
-    <button class="chip" id="copyRemaining">Copy remaining</button>
-    <button class="chip" id="copyDone">Copy played</button>
-    <p class="note">The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade. Progress is shared with the canon and saves automatically.</p>
+    <button class="chip" type="button" id="copyRemaining">Copy remaining</button>
+    <button class="chip" type="button" id="copyDone">Copy played</button>
+    <button class="chip" type="button" id="exportBtn">Export</button>
+    <button class="chip" type="button" id="importBtn">Import</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <button class="chip" type="button" id="themeBtn">Theme: AUTO</button>
+    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you're playing now. The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade. Progress is shared with the canon, saves automatically, and can be exported.</p>
   </footer>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="data/games.js"></script>
 <script src="assets/app.js"></script>
