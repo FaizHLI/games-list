@@ -65,8 +65,10 @@ sorted by year; within a year the order is curated, so put a new entry where you
 
 Two constraints worth knowing:
 
-- `console group` means *where to play it now*, not what it originally shipped on, and
-  it must be one of the strings in `CONSOLE_ORDER` at the top of `assets/app.js`. The
+- `console group` is the platform the game first shipped on, not where to play it now —
+  Super Metroid is SNES even though the best way to play it is NSO. A game that launched
+  on several consoles at once, or on PC, is grouped where it's best played instead. It
+  must be one of the strings in `CONSOLE_ORDER` at the top of `assets/app.js`. The
   console view iterates that list, so an unlisted platform is silently dropped.
 - `rough time` is either a number of hours (`"12h"`) or `"∞"` for something endless.
   Endless games are excluded from the length filters, since they have no length to fit.

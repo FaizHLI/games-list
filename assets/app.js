@@ -1,7 +1,7 @@
 // The playlist is a derived view of the same data: the games flagged in field 7.
 const LIST = document.body.dataset.list || "canon";
 const DATA = LIST === "playlist" ? window.GAMES.filter(g => g[6]) : window.GAMES;
-const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Master System","PC Engine","Game Boy","Genesis","Game Gear","SNES","Sega CD","DOS","PS1","Saturn","N64","Dreamcast","GBA","GameCube","PS2","Xbox","DS","PSP","Wii","Xbox 360","PS3","3DS","Wii U","PS4","Switch (NSO)","Switch 2","PS5","PC (Steam)","PC (Other)"];
+const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Master System","PC Engine","Game Boy","Genesis","Game Gear","SNES","Sega CD","DOS","PS1","Saturn","N64","Dreamcast","GBA","GameCube","PS2","Xbox","DS","PSP","Wii","Xbox 360","PS3","3DS","Vita","Wii U","PS4","Switch 2","PS5","PC (Steam)","PC (Other)"];
 
 const STORAGE_KEY = "games-list-progress-v1";
 const PREFS_KEY = "games-list-prefs-v1";
