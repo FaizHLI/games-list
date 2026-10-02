@@ -12,6 +12,9 @@ const keyOf = g => g[0] + "|" + g[1];
 
 // key -> PLAYING | DONE. Absent means untouched.
 let progress = new Map();
+// key -> 1..10, your own score in half stars (7 is 3.5 stars), the Backloggd scale.
+// Absent means you haven't rated it, and the community score stands.
+let ratings = new Map();
 let minRating = 0, maxTime = 0, platform = "", query = "", view = "year", hideDone = false;
 let saveTimer = null;
 let sections = []; // {indices, countEl, secEl}
@@ -27,17 +30,28 @@ function escAttr(s){ return esc(s).replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 // "∞" means endless: it has no hours to count down and no upper bound to filter on
 const hoursOf = g => g[5] === "∞" ? null : (parseFloat(g[5]) || 0);
 const num = n => n.toLocaleString("en-US");
+// Every rating is in stars, 0.5 to 5. The community score is IGDB's user average
+// (data/scores.js, 0-100) where it has one, and the list's own 1-5 where it doesn't.
+// Your score wins over both everywhere: the badge, the rating filter and the sort.
+const SCORES = window.SCORES || {};
+const communityOf = g => { const s = SCORES[keyOf(g)]; return s ? s.s / 20 : g[2]; };
+const mineOf = g => { const h = ratings.get(keyOf(g)); return h ? h / 2 : null; };
+const ratingOf = g => mineOf(g) ?? communityOf(g);
+// "4" for whole stars, "4.5" for halves, "4.3" for an average
+const fmtStars = x => (Math.round(x * 10) / 10).toFixed(Number.isInteger(Math.round(x * 10) / 10) ? 0 : 1);
 
 /* ---------- storage ---------- */
 
 function serialize(){
-  return JSON.stringify({ v: 2, s: Object.fromEntries(progress) });
+  return JSON.stringify({ v: 3, s: Object.fromEntries(progress), r: Object.fromEntries(ratings) });
 }
-// Accepts the v1 format (a flat array of done keys) as well as v2, so progress
-// saved before the playing state existed still loads, and so does an export file.
+// Accepts the v1 format (a flat array of done keys), v2 (states only) and v3 (states
+// and ratings), so progress saved by any earlier version still loads, as does an
+// export file. Returns {state, ratings}, or null if this isn't progress at all.
 function parseProgress(raw){
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
   let m;
+  const r = new Map();
   if (Array.isArray(data)) m = new Map(data.map(k => [k, DONE]));
   else {
     const s = data && (data.s || data.state);
@@ -47,14 +61,20 @@ function parseProgress(raw){
       const n = +v;
       if (n === PLAYING || n === DONE) m.set(k, n);
     }
+    for (const [k, v] of Object.entries(data.r || {})) {
+      const n = +v;
+      if (n >= 1 && n <= 10 && Number.isInteger(n)) r.set(k, n);
+    }
   }
   // a game renamed or re-dated since this was saved keeps its state under the new key
   for (const [from, to] of Object.entries(window.RENAMED || {})) {
-    if (!m.has(from)) continue;
-    if (!m.has(to)) m.set(to, m.get(from));
-    m.delete(from);
+    for (const map of [m, r]) {
+      if (!map.has(from)) continue;
+      if (!map.has(to)) map.set(to, map.get(from));
+      map.delete(from);
+    }
   }
-  return m;
+  return { state: m, ratings: r };
 }
 
 function scheduleSave(){
@@ -80,10 +100,11 @@ async function load(){
     }
     if (raw) {
       const parsed = parseProgress(raw);
-      if (parsed) { progress = parsed; rewrite = serialize() !== raw; }
+      if (parsed) { progress = parsed.state; ratings = parsed.ratings; rewrite = serialize() !== raw; }
     }
   } catch(e){ /* first run, or storage blocked */ }
-  applyState();
+  // your scores only arrive now, and the rating filter and sort both depend on them
+  if (view === "rating") render(); else { applyState(); applyFilter(); }
   // rewrite v1 data in the current format, so the playing state has somewhere to live,
   // and renamed games under their new keys
   if (rewrite) save();
@@ -93,7 +114,7 @@ window.addEventListener("storage", e => {
   if (e.key !== STORAGE_KEY || e.newValue == null) return;
   try {
     const m = parseProgress(e.newValue);
-    if (m) { progress = m; applyState(); applyFilter(); }
+    if (m) { progress = m.state; ratings = m.ratings; applyState(); applyFilter(); }
   } catch(err){}
 });
 
@@ -107,6 +128,8 @@ function readPrefs(){
   const pick = (k, fallback) => p.has(k) ? p.get(k) : (stored[k] !== undefined ? stored[k] : fallback);
   query = String(pick("q", "")).toLowerCase();
   minRating = +pick("r", 0) || 0;
+  // a link or saved view from the old 3+/4+/5 chips falls back to no rating filter
+  if (![0, 4, 4.25, 4.5].includes(minRating)) minRating = 0;
   maxTime = +pick("t", 0) || 0;
   platform = String(pick("p", ""));
   view = ["year","console","rating"].includes(pick("v", "year")) ? pick("v", "year") : "year";
@@ -145,14 +168,19 @@ function makeRow(i, showYearInMethod){
     "<button class='mark' type='button' aria-pressed='false' title='Currently playing' " +
       "aria-label='Mark " + escAttr(g[1]) + " as currently playing'>&#9654;</button>" +
     "<div class='time'>" + esc(g[5]) + "</div>" +
-    "<div class='rating r" + g[2] + "' role='img' aria-label='rated " + g[2] + " out of 5'>" + g[2] + "</div>";
+    "<button class='rating' type='button' aria-haspopup='dialog'></button>";
 
   row.addEventListener("click", e => {
-    if (e.target.closest(".mark")) return;   // the play button has its own meaning
+    if (e.target.closest(".mark, .rating")) return;   // these buttons have their own meaning
     setStatus(i, row, DONE);
   });
   row.addEventListener("keydown", e => {
+    if (e.target !== row) return;   // Enter on a button inside is that button's
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); setStatus(i, row, DONE); }
+  });
+  row.querySelector(".rating").addEventListener("click", e => {
+    e.stopPropagation();
+    openRater(i, row, e.currentTarget);
   });
   row.querySelector(".mark").addEventListener("click", e => {
     e.stopPropagation();
@@ -200,10 +228,15 @@ function render(){
       makeSection(d + "s", groups[d], false, true);
     }
   } else if (view === "rating") {
+    // Quarter-star bands, best first, and best first within each band. Community
+    // averages bunch between about 3.75 and 4.5, so half stars would put most of the
+    // list in one band. The ends are open: 4.5 and up, and below 3.5, each hold few.
+    const band = x => x >= 4.5 ? 4.5 : x >= 3.5 ? Math.floor(x * 4) / 4 : 0;
     const groups = {};
-    DATA.forEach((g,i) => { (groups[g[2]] = groups[g[2]] || []).push(i); });
-    for (const r of [5,4,3,2,1]) {
-      if (groups[r]) makeSection("Rated " + r, groups[r], true, false);
+    DATA.forEach((g,i) => { const b = band(ratingOf(g)); (groups[b] = groups[b] || []).push(i); });
+    for (const b of Object.keys(groups).map(Number).sort((a,b) => b - a)) {
+      groups[b].sort((x,y) => ratingOf(DATA[y]) - ratingOf(DATA[x]));
+      makeSection(b ? "Rated " + b + "+" : "Below 3.5", groups[b], true, false);
     }
   } else {
     const groups = {};
@@ -235,7 +268,108 @@ function paintRow(row, g){
   row.classList.toggle("playing", s === PLAYING);
   row.setAttribute("aria-checked", s === DONE ? "true" : s === PLAYING ? "mixed" : "false");
   row.querySelector(".mark").setAttribute("aria-pressed", s === PLAYING ? "true" : "false");
+
+  // the badge shows your score when you have one, the community's otherwise
+  const b = row.querySelector(".rating");
+  const mine = mineOf(g), x = ratingOf(g);
+  b.textContent = fmtStars(x);
+  b.className = "rating " + tierOf(x) + (mine !== null ? " mine" : "");
+  const label = (mine !== null ? "Your rating " + fmtStars(mine) + ". " : "") +
+    communityLabel(g) + ". Rate " + g[1];
+  b.title = label;
+  b.setAttribute("aria-label", label);
 }
+
+// the old 1-5 colour scale, so a glance down the column still reads as before
+const tierOf = x => "r" + (x >= 4.5 ? 5 : x >= 4 ? 4 : x >= 3 ? 3 : x >= 2 ? 2 : 1);
+function communityLabel(g){
+  const s = SCORES[keyOf(g)];
+  return s ? "IGDB " + fmtStars(s.s / 20) + " from " + num(s.n) + " ratings"
+           : "List score " + g[2] + " (no IGDB score)";
+}
+
+/* ---------- your rating ---------- */
+
+// One popover, moved to whichever badge opened it. Half stars, like Backloggd.
+const rater = document.createElement("div");
+rater.className = "rater";
+rater.setAttribute("role", "dialog");
+rater.hidden = true;
+rater.innerHTML =
+  "<div class='rhead'><span class='rtitle'></span><button type='button' class='rclear'>Clear</button></div>" +
+  "<div class='rstars'>" +
+  [1,2,3,4,5,6,7,8,9,10].map(h =>
+    "<button type='button' data-h='" + h + "' aria-label='" + h / 2 + " stars'>" +
+    (h % 2 ? (h > 1 ? (h - 1) / 2 : "") + "½" : h / 2) + "</button>").join("") +
+  "</div><div class='rsrc'></div>";
+document.body.appendChild(rater);
+let raterFor = null;   // {i, row, btn}
+
+function openRater(i, row, btn){
+  if (raterFor && raterFor.btn === btn) { closeRater(); return; }
+  raterFor = { i, row, btn };
+  const g = DATA[i], h = ratings.get(keyOf(g)) || 0;
+  rater.querySelector(".rtitle").textContent = g[1];
+  rater.setAttribute("aria-label", "Your rating for " + g[1]);
+  rater.querySelectorAll(".rstars button").forEach(b => {
+    const v = +b.dataset.h;
+    b.setAttribute("aria-pressed", v === h ? "true" : "false");
+    b.classList.toggle("lit", v <= h);
+  });
+  rater.querySelector(".rclear").hidden = !h;
+  rater.querySelector(".rsrc").textContent = communityLabel(g);
+  rater.hidden = false;
+  // under the badge, kept on screen; above it if there's no room below
+  const r = btn.getBoundingClientRect(), w = rater.offsetWidth, ht = rater.offsetHeight;
+  const left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8));
+  const below = r.bottom + 6 + ht < innerHeight;
+  rater.style.left = left + scrollX + "px";
+  rater.style.top = (below ? r.bottom + 6 : r.top - ht - 6) + scrollY + "px";
+  (rater.querySelector(".rstars [aria-pressed='true']") || rater.querySelector(".rstars button")).focus();
+}
+function closeRater(refocus){
+  if (!raterFor) return;
+  rater.hidden = true;
+  if (refocus) raterFor.btn.focus();
+  raterFor = null;
+}
+function setRating(h){
+  const { i, row } = raterFor, k = keyOf(DATA[i]);
+  if (h) ratings.set(k, h); else ratings.delete(k);
+  paintRow(row, DATA[i]);
+  if (minRating) applyFilter(); else refresh();
+  scheduleSave();
+  closeRater(true);
+  showToast(h ? "Rated " + DATA[i][1] + " " + fmtStars(h / 2) : "Cleared your rating");
+}
+rater.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  setRating(b.classList.contains("rclear") ? 0 : +b.dataset.h);
+});
+// hovering previews the score, the way a star widget does
+rater.querySelector(".rstars").addEventListener("pointerover", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  rater.querySelectorAll(".rstars button").forEach(x => x.classList.toggle("lit", +x.dataset.h <= +b.dataset.h));
+});
+rater.querySelector(".rstars").addEventListener("pointerleave", () => {
+  const h = raterFor ? ratings.get(keyOf(DATA[raterFor.i])) || 0 : 0;
+  rater.querySelectorAll(".rstars button").forEach(x => x.classList.toggle("lit", +x.dataset.h <= h));
+});
+rater.addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.preventDefault(); closeRater(true); return; }
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  const bs = [...rater.querySelectorAll(".rstars button")];
+  const at = bs.indexOf(document.activeElement);
+  if (at < 0) return;
+  e.preventDefault();
+  bs[Math.max(0, Math.min(bs.length - 1, at + (e.key === "ArrowRight" ? 1 : -1)))].focus();
+});
+document.addEventListener("pointerdown", e => {
+  if (raterFor && !rater.contains(e.target) && e.target !== raterFor.btn) closeRater();
+});
+window.addEventListener("resize", () => closeRater());
 
 function applyState(){
   document.querySelectorAll(".row").forEach(row => paintRow(row, DATA[row.dataset.i]));
@@ -263,10 +397,11 @@ function refresh(){
 
   // stats describe what is currently on screen, so filtering to one platform
   // answers "how long is what's left here"
-  let shown = 0, sDone = 0, sPlaying = 0, left = 0, endless = 0;
+  let shown = 0, sDone = 0, sPlaying = 0, sRated = 0, left = 0, endless = 0;
   for (const g of DATA) {
     if (!matches(g)) continue;
     shown++;
+    if (ratings.has(keyOf(g))) sRated++;
     const s = progress.get(keyOf(g));
     if (s === DONE) { sDone++; continue; }
     if (s === PLAYING) sPlaying++;
@@ -276,6 +411,7 @@ function refresh(){
   const parts = ["<b>" + num(shown) + "</b> shown"];
   if (sDone) parts.push("<b>" + num(sDone) + "</b> done");
   if (sPlaying) parts.push("<b>" + num(sPlaying) + "</b> playing");
+  if (sRated) parts.push("<b>" + num(sRated) + "</b> rated");
   parts.push("<b>" + num(Math.round(left)) + "h</b> left");
   if (endless) parts.push(num(endless) + " endless");
   const el = $("stats");
@@ -286,7 +422,7 @@ function refresh(){
 /* ---------- filtering ---------- */
 
 function matches(g){
-  if (g[2] < minRating) return false;
+  if (ratingOf(g) < minRating) return false;
   if (query && !g[1].toLowerCase().includes(query)) return false;
   if (platform && g[4] !== platform) return false;
   if (hideDone && progress.get(keyOf(g)) === DONE) return false;
@@ -404,7 +540,8 @@ function fallbackCopy(text, cb){
 
 // progress lives in this browser only, so give it a way out and back in
 $("exportBtn").addEventListener("click", () => {
-  const payload = { app: "games-list", v: 2, exported: new Date().toISOString(), s: Object.fromEntries(progress) };
+  const payload = { app: "games-list", v: 3, exported: new Date().toISOString(),
+    s: Object.fromEntries(progress), r: Object.fromEntries(ratings) };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url;
@@ -413,7 +550,7 @@ $("exportBtn").addEventListener("click", () => {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast("Exported " + progress.size + " games");
+  showToast("Exported " + progress.size + " marked, " + ratings.size + " rated");
 });
 $("importBtn").addEventListener("click", () => $("importFile").click());
 $("importFile").addEventListener("change", async e => {
@@ -424,12 +561,13 @@ $("importFile").addEventListener("change", async e => {
   try { incoming = parseProgress(await file.text()); } catch(err){ incoming = null; }
   if (!incoming) { showToast("Could not read that file"); return; }
   // replacing, not merging: an unmarked game in the file should end up unmarked here
-  if (!confirm("Replace this browser's progress (" + progress.size + " games marked) with " + incoming.size + " from the file?")) return;
-  progress = incoming;
+  const sum = (m, r) => m.size + " marked, " + r.size + " rated";
+  if (!confirm("Replace this browser's progress (" + sum(progress, ratings) + ") with the file's (" + sum(incoming.state, incoming.ratings) + ")?")) return;
+  progress = incoming.state;
+  ratings = incoming.ratings;
   save();
-  applyState();
-  applyFilter();
-  showToast("Imported " + incoming.size + " games");
+  if (view === "rating") render(); else { applyState(); applyFilter(); }
+  showToast("Imported " + sum(incoming.state, incoming.ratings));
 });
 
 let toastTimer = null;

@@ -23,6 +23,10 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   here". Games marked `∞` are counted separately as endless.
 - **Filters:** search, minimum rating, maximum length, and platform. Sort by year,
   platform, or rating. Hide played.
+- **Ratings** are IGDB community averages (IGDB is the database Backloggd is built
+  on), shown in stars to one decimal like Backloggd. Tap a badge to give your own score
+  in half stars; it replaces the community's for you in the badge, the rating filter and
+  the Rating sort, and is marked with a blue corner.
 - **Pick one** chooses at random from what's on screen and not already finished.
 - **Shared progress.** Both pages read one store, keyed `year|title`. Open in two tabs
   and they stay in sync.
@@ -47,6 +51,9 @@ assets/icon-*.png      app icons
 assets/make-icons.js   regenerates those icons: node assets/make-icons.js
 build.js               regenerates the two pages and sw.js: node build.js
 data/games.js          every game -> window.GAMES
+data/scores.js         IGDB ratings -> window.SCORES (generated, don't edit)
+tools/fetch-scores.js  regenerates data/scores.js from IGDB
+tools/igdb-overrides.json  hand-pinned IGDB ids for games the matcher gets wrong
 sw.js                  offline cache
 manifest.webmanifest   PWA metadata
 original/              the two standalone files this site was built from
@@ -72,6 +79,18 @@ Two constraints worth knowing:
   console view iterates that list, so an unlisted platform is silently dropped.
 - `rough time` is either a number of hours (`"12h"`) or `"∞"` for something endless.
   Endless games are excluded from the length filters, since they have no length to fit.
+
+### Refreshing the ratings
+
+`node tools/fetch-scores.js` searches IGDB for every game (about 10 minutes) and
+rewrites `data/scores.js`; then run `node build.js`. It needs Twitch API credentials in
+`.env.local`, which is gitignored — the top of the script says how to get them.
+
+Matching is by name and year. Whatever it can't match, or matches to an entry with
+fewer than 5 ratings, is listed in `tools/fetch-report.txt`. Pin those in
+`tools/igdb-overrides.json` as `"year|title": <IGDB id>` (or `null` to keep the list's
+own 1–5 score), then `node tools/fetch-scores.js --pinned` refetches just the pinned
+games in a few seconds. A new game with no IGDB score falls back to its own rating.
 
 Progress is stored per `year|title`, so renaming a game or changing its year orphans
 whatever was saved under the old key. To carry it over, add `"old year|old title": "new

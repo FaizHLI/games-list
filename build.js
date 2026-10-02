@@ -17,7 +17,7 @@ const ROOT = __dirname;
 const rel = p => path.join(ROOT, p);
 const hash = p => crypto.createHash("sha256").update(fs.readFileSync(rel(p))).digest("hex").slice(0, 8);
 
-const ASSETS = ["assets/fonts.css", "assets/app.css", "data/games.js", "assets/app.js"];
+const ASSETS = ["assets/fonts.css", "assets/app.css", "data/games.js", "data/scores.js", "assets/app.js"];
 const V = Object.fromEntries(ASSETS.map(a => [a, a + "?v=" + hash(a)]));
 
 // The service worker has to cache the same versioned URLs the pages ask for, or every
@@ -32,15 +32,17 @@ const SHELL = ["./", "./index.html", "./playlist.html", "./manifest.webmanifest"
 const CACHE = "games-list-" + crypto.createHash("sha256")
   .update(ASSETS.concat(FONTS).map(a => hash(a)).join("")).digest("hex").slice(0, 10);
 
+const RATE = "Ratings are IGDB community averages, in stars like Backloggd; tap one to give your own, " +
+  "which replaces it for you in filters and sorting. ";
 const TAIL = "Progress is shared with the other list, saves automatically, and can be exported.";
 const CANON_NOTE = "Tap a row to mark a game played; the small ▶ marks the one you are playing now. " +
   "Line under each title is the recommended way to play: NSO where available, emulator or ports when the " +
   "game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. " +
-  "Scope is home console and PC — mobile and annual sports releases are deliberately out. " + TAIL;
+  "Scope is home console and PC — mobile and annual sports releases are deliberately out. " + RATE + TAIL;
 const PLAY_NOTE = "Tap a row to mark a game played; the small ▶ marks the one you are playing now. " +
   "The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 " +
   "buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when " +
-  "the game is not on NSO or mods are a meaningful upgrade. " + TAIL;
+  "the game is not on NSO or mods are a meaningful upgrade. " + RATE + TAIL;
 
 function page({ file, title, docTitle, desc, note }) {
   const here = f => file === f;
@@ -80,9 +82,9 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <div class="controls">
       <input type="search" id="search" placeholder="Search titles" aria-label="Search titles">
       <button class="chip" type="button" data-min="0" aria-pressed="true">All</button>
-      <button class="chip" type="button" data-min="3" aria-pressed="false">3+</button>
       <button class="chip" type="button" data-min="4" aria-pressed="false">4+</button>
-      <button class="chip" type="button" data-min="5" aria-pressed="false">5</button>
+      <button class="chip" type="button" data-min="4.25" aria-pressed="false">4.25+</button>
+      <button class="chip" type="button" data-min="4.5" aria-pressed="false">4.5+</button>
       <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
       <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
@@ -127,6 +129,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="${V["data/games.js"]}"></script>
+<script src="${V["data/scores.js"]}"></script>
 <script src="${V["assets/app.js"]}"></script>
 </body>
 </html>

@@ -83,12 +83,34 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .row.playing .mark{opacity:1;background:var(--play);border-color:var(--play);color:var(--panel)}
 
 .time{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);min-width:30px;text-align:right}
-.rating{flex:none;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700}
-.r5{background:var(--accent);color:var(--panel)}
-.r4{background:var(--ink);color:var(--panel)}
-.r3{border:2px solid var(--ink);color:var(--ink)}
-.r2{border:2px solid var(--muted);color:var(--muted)}
-.r1{border:2px dashed var(--muted);color:var(--muted)}
+/* the badge is a button: tap it to rate. Averages need three characters ("4.3"),
+   so it is wider than the old single digit. The border is always there, in the
+   background colour when the tier has none, so every tier has the same box. */
+.rating{flex:none;position:relative;width:30px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700;border:2px solid transparent;background:none;color:var(--ink);cursor:pointer;border-radius:0}
+.rating:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.r5{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.r4{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.r3{border-color:var(--ink);color:var(--ink)}
+.r2{border-color:var(--muted);color:var(--muted)}
+.r1{border-style:dashed;border-color:var(--muted);color:var(--muted)}
+/* your own score: same tier colours, with a corner notch in the playing blue so it
+   never reads as the community's number */
+.rating.mine::after{content:"";position:absolute;top:-2px;right:-2px;border-style:solid;border-width:0 8px 8px 0;border-color:transparent var(--play) transparent transparent}
+
+/* rating picker */
+.rater{position:absolute;z-index:20;background:var(--panel);border:2px solid var(--ink);padding:8px;width:min(320px,calc(100vw - 16px));box-shadow:4px 4px 0 var(--ink)}
+.rater[hidden]{display:none}
+.rhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.rtitle{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rclear{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;border:none;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:2px}
+.rclear[hidden]{display:none}
+.rstars{display:grid;grid-template-columns:repeat(10,1fr);gap:2px}
+.rstars button{height:32px;padding:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700;border:2px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;border-radius:0}
+.rstars button.lit{background:var(--play);border-color:var(--play);color:var(--panel)}
+.rstars button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:-4px}
+.rstars button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.rsrc{margin-top:6px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted)}
+.rclear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
 /* shuffle target */
 .row.picked{outline:3px solid var(--accent);outline-offset:-3px;animation:pickfade 2.4s ease forwards}

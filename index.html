@@ -13,7 +13,7 @@
 <link rel="preload" href="assets/fonts/public-sans-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/press-start-2p-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts.css?v=8ebdff78">
-<link rel="stylesheet" href="assets/app.css?v=76f420b6">
+<link rel="stylesheet" href="assets/app.css?v=8e892a04">
 <script>/* set an explicit theme before first paint so the choice never flashes */
 try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 </head>
@@ -33,9 +33,9 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <div class="controls">
       <input type="search" id="search" placeholder="Search titles" aria-label="Search titles">
       <button class="chip" type="button" data-min="0" aria-pressed="true">All</button>
-      <button class="chip" type="button" data-min="3" aria-pressed="false">3+</button>
       <button class="chip" type="button" data-min="4" aria-pressed="false">4+</button>
-      <button class="chip" type="button" data-min="5" aria-pressed="false">5</button>
+      <button class="chip" type="button" data-min="4.25" aria-pressed="false">4.25+</button>
+      <button class="chip" type="button" data-min="4.5" aria-pressed="false">4.5+</button>
       <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
       <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
@@ -74,12 +74,13 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <button class="chip" type="button" id="importBtn">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <button class="chip" type="button" id="themeBtn">Theme: AUTO</button>
-    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you are playing now. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. Progress is shared with the other list, saves automatically, and can be exported.</p>
+    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you are playing now. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. Ratings are IGDB community averages, in stars like Backloggd; tap one to give your own, which replaces it for you in filters and sorting. Progress is shared with the other list, saves automatically, and can be exported.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="data/games.js?v=cca8ca2e"></script>
-<script src="assets/app.js?v=bba45fe0"></script>
+<script src="data/scores.js?v=4182b0b9"></script>
+<script src="assets/app.js?v=9ea0ada0"></script>
 </body>
 </html>

@@ -1,2 +1,6 @@
 Thumbs.db
 .DS_Store
+
+# IGDB / Twitch API credentials for tools/fetch-scores.js
+.env.local
+tools/fetch-report.txt
