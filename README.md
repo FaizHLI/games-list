@@ -2,8 +2,8 @@
 
 Two checklists of games worth playing, with the recommended way to play each one.
 
-- **The Canon** (`index.html`) — 297 titles, the historical spine.
-- **The Playlist** (`playlist.html`) — 225 of those that still hold up today.
+- **The Canon** (`index.html`) — 975 titles, the historical spine.
+- **The Playlist** (`playlist.html`) — 670 of those that still hold up today.
 
 Live at <https://faizhli.github.io/games-list/>.
 
@@ -70,6 +70,11 @@ Two constraints worth knowing:
   console view iterates that list, so an unlisted platform is silently dropped.
 - `rough time` is either a number of hours (`"12h"`) or `"∞"` for something endless.
   Endless games are excluded from the length filters, since they have no length to fit.
+
+Progress is stored per `year|title`, so renaming a game or changing its year orphans
+whatever was saved under the old key. To carry it over, add `"old year|old title": "new
+year|new title"` to `window.RENAMED` at the bottom of `data/games.js`; the app moves
+saved and imported progress across on load.
 
 ## Running it locally
 

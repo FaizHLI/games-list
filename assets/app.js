@@ -1,7 +1,7 @@
 // The playlist is a derived view of the same data: the games flagged in field 7.
 const LIST = document.body.dataset.list || "canon";
 const DATA = LIST === "playlist" ? window.GAMES.filter(g => g[6]) : window.GAMES;
-const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Game Boy","Genesis","SNES","DOS","PS1","N64","GBA","GameCube","PS2","DS","Wii","PS3","3DS","Wii U","PS4","Switch (NSO)","Switch 2","PS5","PC (Steam)","PC (Other)"];
+const CONSOLE_ORDER = ["Arcade","Atari 2600","MSX","NES","Master System","PC Engine","Game Boy","Genesis","Game Gear","SNES","Sega CD","DOS","PS1","Saturn","N64","Dreamcast","GBA","GameCube","PS2","Xbox","DS","PSP","Wii","Xbox 360","PS3","3DS","Wii U","PS4","Switch (NSO)","Switch 2","PS5","PC (Steam)","PC (Other)"];
 
 const STORAGE_KEY = "games-list-progress-v1";
 const PREFS_KEY = "games-list-prefs-v1";
@@ -37,13 +37,22 @@ function serialize(){
 // saved before the playing state existed still loads, and so does an export file.
 function parseProgress(raw){
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-  if (Array.isArray(data)) return new Map(data.map(k => [k, DONE]));
-  const s = data && (data.s || data.state);
-  if (!s || typeof s !== "object") return null;
-  const m = new Map();
-  for (const [k, v] of Object.entries(s)) {
-    const n = +v;
-    if (n === PLAYING || n === DONE) m.set(k, n);
+  let m;
+  if (Array.isArray(data)) m = new Map(data.map(k => [k, DONE]));
+  else {
+    const s = data && (data.s || data.state);
+    if (!s || typeof s !== "object") return null;
+    m = new Map();
+    for (const [k, v] of Object.entries(s)) {
+      const n = +v;
+      if (n === PLAYING || n === DONE) m.set(k, n);
+    }
+  }
+  // a game renamed or re-dated since this was saved keeps its state under the new key
+  for (const [from, to] of Object.entries(window.RENAMED || {})) {
+    if (!m.has(from)) continue;
+    if (!m.has(to)) m.set(to, m.get(from));
+    m.delete(from);
   }
   return m;
 }
@@ -60,7 +69,7 @@ async function save(){
   } catch(e){ console.error("Save failed", e); }
 }
 async function load(){
-  let wasLegacy = false;
+  let rewrite = false;
   try {
     let raw = null;
     if (window.storage) {
@@ -71,12 +80,13 @@ async function load(){
     }
     if (raw) {
       const parsed = parseProgress(raw);
-      if (parsed) { progress = parsed; wasLegacy = String(raw).trim()[0] === "["; }
+      if (parsed) { progress = parsed; rewrite = serialize() !== raw; }
     }
   } catch(e){ /* first run, or storage blocked */ }
   applyState();
-  // rewrite v1 data in the current format, so the playing state has somewhere to live
-  if (wasLegacy) save();
+  // rewrite v1 data in the current format, so the playing state has somewhere to live,
+  // and renamed games under their new keys
+  if (rewrite) save();
 }
 // both lists share one store, so keep an open tab of the other page in sync
 window.addEventListener("storage", e => {
