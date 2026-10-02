@@ -2,8 +2,8 @@
 
 Two checklists of games worth playing, with the recommended way to play each one.
 
-- **The Canon** (`index.html`) — 975 titles, the historical spine.
-- **The Playlist** (`playlist.html`) — 670 of those that still hold up today.
+- **The Canon** (`index.html`) — 974 titles, the historical spine.
+- **The Playlist** (`playlist.html`) — 669 of those that still hold up today.
 
 Live at <https://faizhli.github.io/games-list/>.
 

@@ -956,7 +956,6 @@ window.GAMES = [
 [2025,"Final Fantasy Tactics: The Ivalice Chronicles",4,"Switch or PC","Switch 2","45h",true],
 [2025,"Pokémon Legends: Z-A",3,"Switch 2 Edition","Switch 2","35h",true],
 [2025,"Dragon Quest I & II HD-2D Remake",4,"PC or Switch","PC (Steam)","35h",false],
-[2025,"Metroid Prime 4: Beyond",3,"Switch 2 Edition (60fps)","Switch 2","15h",true],
 [2025,"Octopath Traveler 0",3,"PC (Steam)","PC (Steam)","60h",true],
 [2025,"Rhythm Doctor",4,"PC (Steam)","PC (Steam)","12h",true],
 [2026,"Cairn",3,"PC (Steam)","PC (Steam)","10h",true],
