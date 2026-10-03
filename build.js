@@ -17,7 +17,7 @@ const ROOT = __dirname;
 const rel = p => path.join(ROOT, p);
 const hash = p => crypto.createHash("sha256").update(fs.readFileSync(rel(p))).digest("hex").slice(0, 8);
 
-const ASSETS = ["assets/fonts.css", "assets/app.css", "data/games.js", "data/scores.js", "assets/app.js"];
+const ASSETS = ["assets/fonts.css", "assets/app.css", "data/games.js", "data/scores.js", "data/prices.js", "assets/app.js"];
 const V = Object.fromEntries(ASSETS.map(a => [a, a + "?v=" + hash(a)]));
 
 // The service worker has to cache the same versioned URLs the pages ask for, or every
@@ -35,11 +35,13 @@ const CACHE = "games-list-" + crypto.createHash("sha256")
 const RATE = "The first score is the IGDB community average, in stars like Backloggd; the blue one " +
   "beside it is yours — tap it to rate in half stars. ";
 const TAIL = "Progress is shared with the other list, saves automatically, and can be exported.";
-const CANON_NOTE = "Tap a row to mark a game played; the small ▶ marks the one you are playing now. " +
+const CANON_NOTE = "Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for " +
+  "its prices, store links, owned and cart. " +
   "Line under each title is the recommended way to play: NSO where available, emulator or ports when the " +
   "game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. " +
   "Scope is home console and PC — mobile and annual sports releases are deliberately out. " + RATE + TAIL;
-const PLAY_NOTE = "Tap a row to mark a game played; the small ▶ marks the one you are playing now. " +
+const PLAY_NOTE = "Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for " +
+  "its prices, store links, owned and cart. " +
   "The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 " +
   "buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when " +
   "the game is not on NSO or mods are a meaningful upgrade. " + RATE + TAIL;
@@ -86,6 +88,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <button class="chip" type="button" data-min="4.25" aria-pressed="false">4.25+</button>
       <button class="chip" type="button" data-min="4.5" aria-pressed="false">4.5+</button>
       <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
+      <button class="chip" type="button" id="cartBtn" hidden title="Games in your cart and what they cost now">Cart</button>
       <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
     <div class="panel" id="panel" hidden>
@@ -110,6 +113,8 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <div class="frow">
         <span class="flabel">SHOW</span>
         <button class="chip" type="button" id="hideDone" aria-pressed="false">Hide played</button>
+        <button class="chip" type="button" data-own="y" aria-pressed="false">Owned</button>
+        <button class="chip" type="button" data-own="n" aria-pressed="false">Not owned</button>
       </div>
     </div>
   </header>
@@ -131,6 +136,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
 
 <script src="${V["data/games.js"]}"></script>
 <script src="${V["data/scores.js"]}"></script>
+<script src="${V["data/prices.js"]}"></script>
 <script src="${V["assets/app.js"]}"></script>
 </body>
 </html>

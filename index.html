@@ -13,7 +13,7 @@
 <link rel="preload" href="assets/fonts/public-sans-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/press-start-2p-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts.css?v=8ebdff78">
-<link rel="stylesheet" href="assets/app.css?v=3c5b0a79">
+<link rel="stylesheet" href="assets/app.css?v=38feaf15">
 <script>/* set an explicit theme before first paint so the choice never flashes */
 try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 </head>
@@ -37,6 +37,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <button class="chip" type="button" data-min="4.25" aria-pressed="false">4.25+</button>
       <button class="chip" type="button" data-min="4.5" aria-pressed="false">4.5+</button>
       <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
+      <button class="chip" type="button" id="cartBtn" hidden title="Games in your cart and what they cost now">Cart</button>
       <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
     <div class="panel" id="panel" hidden>
@@ -61,6 +62,8 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <div class="frow">
         <span class="flabel">SHOW</span>
         <button class="chip" type="button" id="hideDone" aria-pressed="false">Hide played</button>
+        <button class="chip" type="button" data-own="y" aria-pressed="false">Owned</button>
+        <button class="chip" type="button" data-own="n" aria-pressed="false">Not owned</button>
       </div>
     </div>
   </header>
@@ -75,13 +78,14 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <button class="chip" type="button" id="importBtn">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <button class="chip" type="button" id="themeBtn">Theme: AUTO</button>
-    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you are playing now. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. The first score is the IGDB community average, in stars like Backloggd; the blue one beside it is yours — tap it to rate in half stars. Progress is shared with the other list, saves automatically, and can be exported.</p>
+    <p class="note">Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for its prices, store links, owned and cart. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. The first score is the IGDB community average, in stars like Backloggd; the blue one beside it is yours — tap it to rate in half stars. Progress is shared with the other list, saves automatically, and can be exported.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="data/games.js?v=cca8ca2e"></script>
 <script src="data/scores.js?v=4182b0b9"></script>
-<script src="assets/app.js?v=e00ed55c"></script>
+<script src="data/prices.js?v=173a2333"></script>
+<script src="assets/app.js?v=82d309c1"></script>
 </body>
 </html>

@@ -4,3 +4,5 @@ Thumbs.db
 # IGDB / Twitch API credentials for tools/fetch-scores.js
 .env.local
 tools/fetch-report.txt
+tools/prices-report.txt
+tools/prices-matches.txt

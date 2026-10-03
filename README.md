@@ -28,6 +28,15 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   The blue one beside it is yours: tap it to rate in half stars. The rating chips filter
   on IGDB; sort by **IGDB** or by **Mine**, which groups your scores and puts unrated
   games last.
+- **Tap a game** for its panel: played/playing, **owned**, **in cart**, your rating,
+  IGDB and Backloggd links, and prices. The checkbox on the left still marks a game
+  played in one tap. Owned games get an OWNED tag, and More → Show filters by it.
+- **Prices** are a gg.deals snapshot for every game sold on Steam (about 490): best
+  retail and keyshop price now, and the lowest ever. Games bought as part of a
+  collection say so ("Sold as Castlevania Anniversary Collection"). Switch games link
+  to Deku Deals, which has no API.
+- **Cart** totals what the games you've added cost now, counting a collection once
+  even when several of its games are in the cart. It appears once something is in it.
 - **Pick one** chooses at random from what's on screen and not already finished.
 - **Shared progress.** Both pages read one store, keyed `year|title`. Open in two tabs
   and they stay in sync.
@@ -55,6 +64,9 @@ data/games.js          every game -> window.GAMES
 data/scores.js         IGDB ratings -> window.SCORES (generated, don't edit)
 tools/fetch-scores.js  regenerates data/scores.js from IGDB
 tools/igdb-overrides.json  hand-pinned IGDB ids for games the matcher gets wrong
+data/prices.js         gg.deals price snapshot -> window.PRICES (generated, don't edit)
+tools/fetch-prices.js  regenerates data/prices.js
+tools/steam-overrides.json  hand-pinned Steam app ids: collections, remasters, misses
 sw.js                  offline cache
 manifest.webmanifest   PWA metadata
 original/              the two standalone files this site was built from
@@ -92,6 +104,18 @@ fewer than 5 ratings, is listed in `tools/fetch-report.txt`. Pin those in
 `tools/igdb-overrides.json` as `"year|title": <IGDB id>` (or `null` to keep the list's
 own 1–5 score), then `node tools/fetch-scores.js --pinned` refetches just the pinned
 games in a few seconds. A new game with no IGDB score falls back to its own rating.
+
+### Refreshing the prices
+
+`node tools/fetch-prices.js`, then `node build.js`. It needs `GGDEALS_API_KEY` in
+`.env.local` as well as the Twitch credentials, since each game's Steam app id comes
+from its IGDB entry. gg.deals prices at most 1000 games an hour and one run uses
+about 950, so don't run it twice in an hour.
+
+When the game you'd buy isn't the game's own IGDB entry — a collection, a remaster —
+pin its Steam app id in `tools/steam-overrides.json`. `tools/prices-report.txt` lists
+PC games still without a price; `tools/prices-matches.txt` shows what each game
+matched, worth a skim after adding pins.
 
 Progress is stored per `year|title`, so renaming a game or changing its year orphans
 whatever was saved under the old key. To carry it over, add `"old year|old title": "new
