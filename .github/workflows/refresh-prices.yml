@@ -1,0 +1,57 @@
+# Refreshes the gg.deals price snapshot once a day and publishes it.
+#
+# Needs three repository secrets (Settings > Secrets and variables > Actions), the
+# same values as .env.local: GGDEALS_API_KEY, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET.
+# Run it by hand from the Actions tab with "Run workflow".
+
+name: Refresh prices
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # daily, 09:17 UTC; off the hour, when Actions is least busy
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to commit the new snapshot
+  pages: write      # to ask Pages to rebuild
+
+# never two runs at once: the second would trip gg.deals' 1000-games-an-hour limit
+concurrency: refresh-prices
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Fetch prices
+        run: node tools/fetch-prices.js
+        env:
+          GGDEALS_API_KEY: ${{ secrets.GGDEALS_API_KEY }}
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+
+      # stamps the new prices.js into the pages and the service worker's cache name
+      - name: Build
+        run: node build.js
+
+      - name: Commit and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add data/prices.js index.html playlist.html sw.js
+          if git diff --cached --quiet; then
+            echo "Prices unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh prices ($(date -u +%F))"
+          git push
+          # a push made with this workflow's token may not start a Pages build on its own
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" --silent

@@ -105,7 +105,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <button class="chip" type="button" data-price="5" aria-pressed="false">Under $5</button>
         <button class="chip" type="button" data-price="10" aria-pressed="false">Under $10</button>
         <button class="chip" type="button" data-price="20" aria-pressed="false">Under $20</button>
-        <button class="chip" type="button" id="atLow" aria-pressed="false" title="Retail or keyshop price at its lowest ever">Lowest ever</button>
+        <button class="chip" type="button" id="atLow" aria-pressed="false" title="Official-store price at its lowest ever">Lowest ever</button>
       </div>
       <div class="frow">
         <span class="flabel">PLATFORM</span>

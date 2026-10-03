@@ -465,15 +465,18 @@ const moneyFmt = new Intl.NumberFormat("en-US", { style: "currency", currency: C
 // 0 is real: free-to-play now, or a giveaway at its lowest
 const money = n => n == null ? "—" : n === 0 ? "Free" : moneyFmt.format(n);
 const lowest = (...xs) => { const v = xs.filter(x => x != null); return v.length ? Math.min(...v) : null; };
-// best price now, retail or keyshop - the number the cart totals and the filter uses
-const nowPrice = g => { const p = priceOf(g); return p ? lowest(p.r, p.k) : null; };
-// At its lowest ever: retail or keyshop is down to the cheapest it has been. A lowest of
-// 0 was a giveaway, which a paid price can never match, so those don't count.
+// Everything that adds up or compares prices uses retail: official stores, which match
+// Steam. gg.deals' keyshop price is the cheapest key for ANY platform - Doom Eternal's
+// $0.49 is an Xbox key - and its API can't narrow that to Steam keys, so keyshop prices
+// are shown in the game panel, labelled, and nowhere else.
+const nowPrice = g => { const p = priceOf(g); return p ? p.r : null; };
+// The cheapest it has sold for. A lowest of 0 was a giveaway, which no sale matches, so
+// the paid price stands in for it.
+const lowPaid = p => p.hr > 0 ? Math.min(p.hr, p.r) : p.r;
+// at its lowest ever right now (a giveaway low can't be matched, so it never counts)
 function atLowest(g){
   const p = priceOf(g);
-  if (!p) return false;
-  const at = (now, low) => now != null && low != null && low > 0 && now <= low + 0.005;
-  return at(p.r, p.hr) || at(p.k, p.hk);
+  return !!p && p.r != null && p.hr > 0 && p.r <= p.hr + 0.005;
 }
 const asOfText = () => AS_OF
   ? "Prices as of " + new Date(AS_OF + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -556,10 +559,11 @@ function paintDetail(){
   q(".sprice").innerHTML = p
     ? (p.t ? "<p class='snote sold'>Sold as <b>" + esc(p.t) + "</b></p>" : "") +
       "<dl class='prices'>" +
-      "<dt>Retail now</dt><dd>" + money(p.r) + "</dd>" +
-      "<dt>Keyshops now</dt><dd>" + money(p.k) + "</dd>" +
-      "<dt>Lowest ever</dt><dd>" + money(lowest(p.hr, p.hk)) + "</dd></dl>" +
+      "<dt>Price now</dt><dd>" + money(p.r) + "</dd>" +
+      "<dt>Lowest ever</dt><dd>" + (p.hr === 0 ? "Free (giveaway)" : money(p.hr)) + "</dd></dl>" +
       (atLowest(g) ? "<p class='snote deal'>At its lowest price ever right now.</p>" : "") +
+      (p.k != null ? "<p class='snote'>Keyshops from " + money(p.k) + ": a key for any platform, " +
+        "not necessarily Steam, from third-party resellers.</p>" : "") +
       "<p class='snote'>" + esc(asOfText()) + " · gg.deals, US prices</p>"
     : "<p class='snote'>" + why + "</p>";
   q(".sstores").innerHTML = storeLinks(g).map(linkHtml).join("");
@@ -616,34 +620,33 @@ function firstOfApp(items){
   return first;
 }
 function cartTotals(items){
-  let retail = 0, best = 0, ever = 0, priced = 0;
+  let now = 0, low = 0, priced = 0;
   const first = firstOfApp(items);
   for (const [g] of items) {
     const p = priceOf(g);
-    if (!p || lowest(p.r, p.k) == null) continue;
+    if (!p || p.r == null) continue;
     priced++;
     if (first.get(p.app) !== g) continue;
-    retail += p.r ?? p.k;
-    best += lowest(p.r, p.k);
-    ever += lowest(p.hr, p.hk, p.r, p.k);
+    now += p.r;
+    low += lowPaid(p);
   }
-  return { retail, best, ever, priced };
+  return { now, low, priced };
 }
 function paintCartBtn(){
   const btn = $("cartBtn"), items = cartGames(), t = cartTotals(items);
   btn.hidden = !items.length;
-  btn.textContent = "Cart " + items.length + (t.priced ? " · " + money(t.best) : "");
+  btn.textContent = "Cart " + items.length + (t.priced ? " · " + money(t.now) : "");
 }
 function paintCart(){
   const items = cartGames(), t = cartTotals(items), missing = items.length - t.priced;
   const first = firstOfApp(items);
   const rows = items.map(([g, i]) => {
-    const p = priceOf(g), now = p && lowest(p.r, p.k), dup = p && first.get(p.app) !== g;
+    const p = priceOf(g), now = p && p.r, dup = p && first.get(p.app) !== g;
     const price = dup
       ? "<span class='csub'>in " + esc(p.t || first.get(p.app)[1]) + ", counted above</span>"
       : now != null
-      ? "<span class='cprice'>" + money(now) + "</span><span class='csub'>" +
-        (p.k != null && p.r != null && p.k < p.r ? "keyshop · retail " + money(p.r) : "retail") + "</span>"
+      ? "<span class='cprice'>" + money(now) + "</span>" +
+        (p.hr > 0 && p.hr < now ? "<span class='csub'>was " + money(p.hr) + " at its lowest</span>" : "")
       : "<span class='csub'>" + (storeLinks(g).map(linkHtml).join(" ") || "no store price") + "</span>";
     return "<li><div class='ctitle'><button type='button' class='clink' data-open='" + i + "'>" + esc(g[1]) + "</button>" +
       "<span class='csub'>" + esc(p && p.t && !dup ? "as " + p.t : g[4]) + "</span></div><div class='cright'>" + price + "</div>" +
@@ -656,12 +659,11 @@ function paintCart(){
     (items.length
       ? "<ul class='clist'>" + rows + "</ul>" +
         (t.priced ? "<dl class='prices ctotal'>" +
-        "<dt>Best price now</dt><dd>" + money(t.best) + "</dd>" +
-        "<dt>All at retail</dt><dd>" + money(t.retail) + "</dd>" +
-        "<dt>At their lowest ever</dt><dd>" + money(t.ever) + "</dd></dl>" : "") +
+        "<dt>Total now</dt><dd>" + money(t.now) + "</dd>" +
+        "<dt>At their lowest sale prices</dt><dd>" + money(t.low) + "</dd></dl>" : "") +
         "<p class='snote'>" + (missing ? missing + (missing === 1 ? " game has no price and isn't" : " games have no price and aren't") +
           " counted. " : "") + esc(asOfText()) +
-          (AS_OF ? " · gg.deals, US prices. Keyshops are third-party key resellers." : "") + "</p>" +
+          (AS_OF ? " · gg.deals, US official stores (Steam, GOG, Fanatical and the like), no keyshops." : "") + "</p>" +
         "<div class='sacts'><button type='button' class='chip' data-clear-cart>Empty cart</button></div>"
       : "<p class='snote'>Nothing here yet. Open a game and press <b>In cart</b>.</p>");
 }

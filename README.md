@@ -31,11 +31,14 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
 - **Tap a game** for its panel: played/playing, **owned**, **in cart**, your rating,
   IGDB and Backloggd links, and prices. The checkbox on the left still marks a game
   played in one tap. Owned games get an OWNED tag, and More → Show filters by it.
-- **Prices** are a gg.deals snapshot for every game sold on Steam (about 490): best
-  retail and keyshop price now, and the lowest ever. Games bought as part of a
+- **Prices** are a gg.deals snapshot for every game sold on Steam (about 490): the
+  best official-store price now (Steam, GOG, Fanatical and the like) and the lowest
+  ever. Keyshop prices appear only as a note in the panel: gg.deals reports the
+  cheapest key for any platform (Doom Eternal's $0.49 is an Xbox key) and its API
+  can't narrow that to Steam, so nothing adds up or filters on them. Games bought as part of a
   collection say so ("Sold as Castlevania Anniversary Collection"). Switch games link
   to Deku Deals, which has no API.
-- **Price filters** (More → Price): under $5 / $10 / $20 on the best price now, and
+- **Price filters** (More → Price): under $5 / $10 / $20 on the price now, and
   **Lowest ever** for games at their all-time low, which also get a LOWEST tag. Sort
   by **Price** for cheapest first.
 - **Cart** totals what the games you've added cost now, counting a collection once
