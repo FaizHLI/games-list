@@ -842,8 +842,24 @@ $("importFile").addEventListener("change", async e => {
   const file = e.target.files && e.target.files[0];
   e.target.value = "";              // so the same file can be picked again
   if (!file) return;
-  let incoming;
-  try { incoming = parseProgress(await file.text()); } catch(err){ incoming = null; }
+  let text = "", incoming;
+  try { text = await file.text(); } catch(err){}
+  // a library file (tools/fetch-steam-owned.js) only says what you own, so it adds to
+  // your owned games and leaves everything else alone
+  let lib = null;
+  try { lib = JSON.parse(text); } catch(err){}
+  if (lib && lib.kind === "owned" && Array.isArray(lib.o)) {
+    const add = lib.o.filter(k => typeof k === "string" && !owned.has(k));
+    if (!add.length) { showToast("You already own all " + lib.o.length + " of those"); return; }
+    if (!confirm("Mark " + add.length + " more games as owned" + (lib.source ? " from your " + lib.source[0].toUpperCase() + lib.source.slice(1) + " library" : "") + "?")) return;
+    for (const k of add) owned.add(k);
+    save();
+    applyState();
+    if (ownFilter) applyFilter();
+    showToast("Marked " + add.length + " games owned");
+    return;
+  }
+  try { incoming = parseProgress(text); } catch(err){ incoming = null; }
   if (!incoming) { showToast("Could not read that file"); return; }
   // replacing, not merging: an unmarked game in the file should end up unmarked here
   const sum = (m, r, o) => m.size + " marked, " + r.size + " rated, " + o.size + " owned";

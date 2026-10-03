@@ -117,6 +117,14 @@ pin its Steam app id in `tools/steam-overrides.json`. `tools/prices-report.txt` 
 PC games still without a price; `tools/prices-matches.txt` shows what each game
 matched, worth a skim after adding pins.
 
+### Marking your Steam library owned
+
+`node tools/fetch-steam-owned.js` reads your Steam library (`STEAM_API_KEY` and
+`STEAM_PROFILE` in `.env.local`, with Game details set to Public) and writes
+`exports/steam-owned-<date>.json`. On the site, Import that file: it adds those games
+to what you own and leaves played marks, ratings and the cart alone. Owning a
+collection marks every game sold as it.
+
 Progress is stored per `year|title`, so renaming a game or changing its year orphans
 whatever was saved under the old key. To carry it over, add `"old year|old title": "new
 year|new title"` to `window.RENAMED` at the bottom of `data/games.js`; the app moves
