@@ -6,3 +6,5 @@ Thumbs.db
 tools/fetch-report.txt
 tools/prices-report.txt
 tools/prices-matches.txt
+tools/reviews-report.txt
+tools/.reviews-run.log

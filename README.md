@@ -23,11 +23,13 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   here". Games marked `∞` are counted separately as endless.
 - **Filters:** search, minimum rating, maximum length, and platform. Sort by year,
   platform, or rating. Hide played.
-- **Two ratings per game, kept apart.** The first badge is the IGDB community average
-  (IGDB is the database Backloggd is built on), in stars to one decimal like Backloggd.
-  The blue one beside it is yours: tap it to rate in half stars. The rating chips filter
-  on IGDB; sort by **IGDB** or by **Mine**, which groups your scores and puts unrated
-  games last.
+- **Two ratings per game, kept apart.** The first badge is the community's: by default
+  the players' score, IGDB's user average weighted by how many ratings it rests on (a
+  Bayesian average, so 5.0 from six fans doesn't outrank 4.7 from 1,600); under More →
+  Score, switch it to the critics', the Metacritic Metascore. The blue one beside it is
+  yours: tap it to rate in half stars. The rating chips filter on the community score;
+  sort by **Score** or by **Mine**. The game panel shows every score side by side,
+  with Steam's % positive for games on Steam.
 - **Tap a game** for its panel: played/playing, **owned**, **in cart**, your rating,
   IGDB and Backloggd links, and prices. The checkbox on the left still marks a game
   played in one tap. Owned games get an OWNED tag, and More → Show filters by it.
@@ -45,6 +47,9 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   under More → Show. Wishlist + Lowest ever shows what you want that's at its cheapest.
 - **Cart** totals what the games you've added cost now, counting a collection once
   even when several of its games are in the cart. It appears once something is in it.
+- **Box art** and a short summary, genres and developer from IGDB in the game panel;
+  More → Show → **Covers** puts thumbnails on the rows.
+- A **cart button** on each buyable game's row adds it without opening the panel.
 - **Pick one** chooses at random from what's on screen and not already finished.
 - **Shared progress.** Both pages read one store, keyed `year|title`. Open in two tabs
   and they stay in sync.
@@ -75,6 +80,11 @@ tools/igdb-overrides.json  hand-pinned IGDB ids for games the matcher gets wrong
 data/prices.js         gg.deals price snapshot -> window.PRICES (generated, don't edit)
 tools/fetch-prices.js  regenerates data/prices.js
 tools/steam-overrides.json  hand-pinned Steam app ids: collections, remasters, misses
+data/reviews.js        Metascores (via RAWG) and Steam reviews -> window.REVIEWS (generated)
+tools/fetch-reviews.js regenerates data/reviews.js; RAWG_API_KEY in .env.local
+tools/rawg-overrides.json  hand-pinned RAWG slugs for games the matcher gets wrong
+data/meta.js           IGDB box art, genres, developer, summary -> window.META (generated)
+tools/fetch-meta.js    regenerates data/meta.js
 sw.js                  offline cache
 manifest.webmanifest   PWA metadata
 original/              the two standalone files this site was built from

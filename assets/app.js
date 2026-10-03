@@ -27,10 +27,16 @@ let ownFilter = "";   // "" any, "y" owned only, "n" not owned
 // games whose price is at its lowest ever. Either one hides games with no price.
 let maxPrice = 0, atLowOnly = false;
 let wishOnly = false;
+// what the community badge, rating filter and score sort follow: "players" or "critics"
+let basis = "players";
+let showCovers = false;   // box-art thumbnails on the rows
 let saveTimer = null;
 let sections = []; // {indices, countEl, secEl}
 
 const list = document.getElementById("list");
+const CART_ICON = "<svg viewBox='0 0 16 16' width='14' height='14' aria-hidden='true'><path d='M1 2h2.2l1.6 8h8l1.6-6H4.2' " +
+  "fill='none' stroke='currentColor' stroke-width='1.6' stroke-linejoin='round'/><circle cx='6' cy='13' r='1.3' " +
+  "fill='currentColor'/><circle cx='12' cy='13' r='1.3' fill='currentColor'/></svg>";
 const $ = id => document.getElementById(id);
 
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
@@ -45,7 +51,28 @@ const num = n => n.toLocaleString("en-US");
 // community score, IGDB's user average (data/scores.js, 0-100) where it has one and
 // the list's own 1-5 where it doesn't, and yours, null until you rate the game.
 const SCORES = window.SCORES || {};
-const communityOf = g => { const s = SCORES[keyOf(g)]; return s ? s.s / 20 : g[2]; };
+const REVIEWS = window.REVIEWS || {};
+// box art and metadata from IGDB (data/meta.js); covers come straight from IGDB's servers
+const META = window.META || {};
+const coverUrl = (id, size) => "https://images.igdb.com/igdb/image/upload/" + size + "/" + id + ".jpg";
+// Players: IGDB's user average, weighted by how many ratings it rests on. A plain
+// average lets 6 devoted fans put a game at 5.0 above Baldur's Gate III, so every
+// score is blended with PRIOR imaginary ratings at the list's mean (a Bayesian
+// average, as IMDb ranks its top 250): 6 ratings barely count, 1,000 stand on their own.
+const PRIOR = 25;
+const MEAN = (() => {
+  const v = Object.values(SCORES);
+  return v.length ? v.reduce((t, s) => t + s.s, 0) / v.length : 80;
+})();
+const playersOf = g => {
+  const s = SCORES[keyOf(g)];
+  return s ? (s.s * s.n + MEAN * PRIOR) / (s.n + PRIOR) / 20 : g[2];
+};
+// Critics: the Metascore (Metacritic, via RAWG), when the game has one
+const criticsOf = g => { const r = REVIEWS[keyOf(g)]; return r && r.mc ? r.mc / 20 : null; };
+// the score the badge shows; in critics mode a game with no Metascore falls back to players
+const communityOf = g => basis === "critics" ? (criticsOf(g) ?? playersOf(g)) : playersOf(g);
+const isFallback = g => basis === "critics" && criticsOf(g) === null;
 const mineOf = g => { const h = ratings.get(keyOf(g)); return h ? h / 2 : null; };
 // "4" for whole stars, "4.5" for halves, "4.3" for an average
 const fmtStars = x => (Math.round(x * 10) / 10).toFixed(Number.isInteger(Math.round(x * 10) / 10) ? 0 : 1);
@@ -164,6 +191,8 @@ function readPrefs(){
   maxPrice = [5, 10, 20].includes(+pick("pr", 0)) ? +pick("pr", 0) : 0;
   atLowOnly = String(pick("lo", "")) === "1";
   wishOnly = String(pick("w", "")) === "1";
+  basis = pick("sc", "") === "c" ? "critics" : "players";
+  showCovers = String(pick("cv", "")) === "1";
 }
 function writePrefs(){
   const p = new URLSearchParams();
@@ -177,10 +206,12 @@ function writePrefs(){
   if (maxPrice) p.set("pr", maxPrice);
   if (atLowOnly) p.set("lo", "1");
   if (wishOnly) p.set("w", "1");
+  if (basis === "critics") p.set("sc", "c");
+  if (showCovers) p.set("cv", "1");
   const qs = p.toString();
   history.replaceState(null, "", qs ? "?" + qs : location.pathname);
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ q: query, r: minRating, t: maxTime, p: platform, v: view, h: hideDone ? "1" : "", o: ownFilter, pr: maxPrice, lo: atLowOnly ? "1" : "", w: wishOnly ? "1" : "" }));
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ q: query, r: minRating, t: maxTime, p: platform, v: view, h: hideDone ? "1" : "", o: ownFilter, pr: maxPrice, lo: atLowOnly ? "1" : "", w: wishOnly ? "1" : "", sc: basis === "critics" ? "c" : "", cv: showCovers ? "1" : "" }));
   } catch(e){}
 }
 
@@ -201,8 +232,17 @@ function makeRow(i, showYearInMethod){
   row.innerHTML =
     "<button class='box' type='button' role='checkbox' aria-checked='false' " +
       "aria-label='Played " + escAttr(g[1]) + "'>&#10003;</button>" +
+    // lazy, so only the covers scrolled into view are ever fetched
+    (showCovers ? (META[keyOf(g)] && META[keyOf(g)].c
+      ? "<img class='thumb' src='" + coverUrl(META[keyOf(g)].c, "t_cover_small") + "' alt='' loading='lazy' decoding='async'>"
+      : "<span class='thumb'></span>") : "") +
     "<div class='titles'><span class='title'>" + esc(g[1]) + "</span>" +
     "<div class='method'><span class='own' hidden>OWNED</span><span class='own wish' hidden>WISHLIST</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div></div>" +
+    // only what you can buy gets a cart button; the rest keep the space so columns align
+    (storeLinks(g).length
+      ? "<button class='buy' type='button' aria-pressed='false' title='Add to cart' " +
+        "aria-label='Add " + escAttr(g[1]) + " to cart'>" + CART_ICON + "</button>"
+      : "<span class='buy' aria-hidden='true'></span>") +
     "<button class='mark' type='button' aria-pressed='false' title='Currently playing' " +
       "aria-label='Mark " + escAttr(g[1]) + " as currently playing'>&#9654;</button>" +
     "<div class='time'>" + esc(g[5]) + "</div>" +
@@ -228,6 +268,13 @@ function makeRow(i, showYearInMethod){
   row.querySelector(".mark").addEventListener("click", e => {
     e.stopPropagation();
     setStatus(i, row, PLAYING);
+  });
+  const buy = row.querySelector("button.buy");
+  if (buy) buy.addEventListener("click", e => {
+    e.stopPropagation();
+    toggleIn(cart, i);
+    const n = cartGames().length;
+    showToast((cart.has(keyOf(g)) ? "Added to cart" : "Removed from cart") + " · " + n + (n === 1 ? " game" : " games"));
   });
   return row;
 }
@@ -279,7 +326,8 @@ function render(){
     DATA.forEach((g,i) => { const b = band(communityOf(g)); (groups[b] = groups[b] || []).push(i); });
     for (const b of Object.keys(groups).map(Number).sort((a,b) => b - a)) {
       groups[b].sort((x,y) => communityOf(DATA[y]) - communityOf(DATA[x]));
-      makeSection(b ? "IGDB " + b + "+" : "IGDB below 3.5", groups[b], true, false);
+      const who = basis === "critics" ? "Critics" : "Players";
+      makeSection(b ? who + " " + b + "+" : who + " below 3.5", groups[b], true, false);
     }
   } else if (view === "price") {
     // cheapest first; what has no price goes last, in IGDB order
@@ -341,6 +389,12 @@ function paintRow(row, g){
   row.classList.toggle("playing", s === PLAYING);
   row.querySelector(".box").setAttribute("aria-checked", s === DONE ? "true" : "false");
   row.querySelector(".mark").setAttribute("aria-pressed", s === PLAYING ? "true" : "false");
+  const buy = row.querySelector("button.buy");
+  if (buy) {
+    const inCart = cart.has(keyOf(g));
+    buy.setAttribute("aria-pressed", inCart ? "true" : "false");
+    buy.title = inCart ? "In cart; tap to remove" : "Add to cart";
+  }
   row.querySelector(".own").hidden = !owned.has(keyOf(g));
   row.querySelector(".low").hidden = !atLowest(g);
   row.querySelector(".wish").hidden = !wish.has(keyOf(g));
@@ -348,7 +402,7 @@ function paintRow(row, g){
   // two badges: the community's score, then yours (a faint + until you rate it)
   const c = row.querySelector(".rating"), x = communityOf(g);
   c.textContent = fmtStars(x);
-  c.className = "rating " + tierOf(x);
+  c.className = "rating " + tierOf(x) + (isFallback(g) ? " alt" : "");
   c.title = communityLabel(g);
   c.setAttribute("aria-label", communityLabel(g));
   const b = row.querySelector(".mine"), mine = mineOf(g);
@@ -361,10 +415,13 @@ function paintRow(row, g){
 
 // the old 1-5 colour scale, so a glance down the column still reads as before
 const tierOf = x => "r" + (x >= 4.5 ? 5 : x >= 4 ? 4 : x >= 3 ? 3 : x >= 2 ? 2 : 1);
+// what the badge is showing, in words
 function communityLabel(g){
+  if (basis === "critics" && criticsOf(g) !== null) return "Metacritic " + REVIEWS[keyOf(g)].mc + " (critics)";
   const s = SCORES[keyOf(g)];
-  return s ? "IGDB " + fmtStars(s.s / 20) + " from " + num(s.n) + " ratings"
-           : "List score " + g[2] + " (no IGDB score)";
+  const players = s ? "Players " + fmtStars(playersOf(g)) + " (IGDB, " + num(s.n) + " ratings)"
+                    : "List score " + g[2] + " (no IGDB score)";
+  return isFallback(g) ? "No Metascore. " + players : players;
 }
 
 /* ---------- your rating ---------- */
@@ -513,9 +570,10 @@ const detail = document.createElement("dialog");
 detail.className = "sheet";
 detail.setAttribute("aria-labelledby", "dTitle");
 detail.innerHTML =
-  "<div class='stop'><div class='stitles'><h2 id='dTitle'></h2><p class='smeta'></p></div>" +
+  "<div class='stop'><img class='scover' alt='' hidden><div class='stitles'><h2 id='dTitle'></h2><p class='smeta'></p>" +
+  "<p class='sgenre'></p></div>" +
   "<button type='button' class='sclose' aria-label='Close'>&times;</button></div>" +
-  "<p class='smethod'></p>" +
+  "<p class='smethod'></p><p class='ssum'></p>" +
   "<div class='sacts'>" +
   "<button type='button' class='chip' data-act='done'>Played</button>" +
   "<button type='button' class='chip' data-act='playing'>Playing</button>" +
@@ -525,7 +583,7 @@ detail.innerHTML =
   "<div class='ssec'><div class='shead'><span class='flabel'>YOUR RATING</span>" +
   "<button type='button' class='rclear' data-act='clear'>Clear</button></div>" +
   "<div class='rstars'>" + starButtons() + "</div></div>" +
-  "<div class='ssec'><span class='flabel'>COMMUNITY</span><p class='sscore'></p><p class='slinks sscorelinks'></p></div>" +
+  "<div class='ssec'><span class='flabel'>SCORES</span><dl class='prices sscores'></dl><p class='slinks sscorelinks'></p></div>" +
   "<div class='ssec'><span class='flabel'>PRICE</span><div class='sprice'></div><p class='slinks sstores'></p></div>";
 document.body.appendChild(detail);
 let detailI = null;
@@ -542,6 +600,11 @@ function paintDetail(){
   q("#dTitle").textContent = g[1];
   q(".smeta").textContent = [g[0], g[4], g[5] === "∞" ? "endless" : g[5]].join(" · ");
   q(".smethod").textContent = "Best way to play: " + g[3];
+  const m = META[k] || {}, cover = q(".scover");
+  cover.hidden = !m.c;
+  if (m.c) { cover.src = coverUrl(m.c, "t_cover_big"); cover.alt = "Box art for " + g[1]; }
+  q(".sgenre").textContent = [(m.g || []).join(", "), (m.d || []).join(", ")].filter(Boolean).join(" · ");
+  q(".ssum").textContent = m.s || "";
   const press = (act, on) => q("[data-act='" + act + "']").setAttribute("aria-pressed", on ? "true" : "false");
   press("done", s === DONE);
   press("playing", s === PLAYING);
@@ -554,11 +617,18 @@ function paintDetail(){
     b.classList.toggle("lit", +b.dataset.h <= h);
   });
 
-  const sc = SCORES[k];
-  q(".sscore").textContent = communityLabel(g);
-  q(".sscorelinks").innerHTML = sc && sc.id
-    ? [["IGDB", "https://www.igdb.com/games/" + sc.id], ["Backloggd", "https://backloggd.com/games/" + sc.id + "/"]].map(linkHtml).join("")
-    : "";
+  // every score side by side, whichever one the badge follows
+  const sc = SCORES[k], rv = REVIEWS[k] || {}, line = (dt, dd) => "<dt>" + dt + "</dt><dd>" + dd + "</dd>";
+  const raw = sc ? sc.s / 20 : null, weighted = playersOf(g);
+  q(".sscores").innerHTML =
+    line("Critics (Metacritic)", rv.mc ? rv.mc + "<span class='of'>/100</span>" : "—") +
+    line("Players (IGDB)", sc ? fmtStars(weighted) +
+      "<span class='of'>" + (Math.abs(raw - weighted) >= 0.05 ? "avg " + fmtStars(raw) + " · " : "") + num(sc.n) + " ratings</span>" : "—") +
+    (rv.st ? line("Steam reviews", Math.round(rv.st[0] / rv.st[1] * 100) + "%<span class='of'>" + num(rv.st[1]) + " reviews</span>") : "");
+  const links = [];
+  if (sc && sc.id) links.push(["IGDB", "https://www.igdb.com/games/" + sc.id], ["Backloggd", "https://backloggd.com/games/" + sc.id + "/"]);
+  links.push(["Metacritic", "https://www.metacritic.com/search/" + encodeURIComponent(plainTitle(g)) + "/?category=13"]);
+  q(".sscorelinks").innerHTML = links.map(linkHtml).join("");
 
   const p = priceOf(g);
   const why = onSwitch(g) ? "No price snapshot for Switch games. Deku Deals has live eShop prices."
@@ -829,6 +899,21 @@ document.querySelectorAll(".chip[data-price]").forEach(btn => {
     applyFilter();
   });
 });
+$("covers").addEventListener("click", e => {
+  showCovers = !showCovers;
+  e.currentTarget.setAttribute("aria-pressed", showCovers ? "true" : "false");
+  render();
+  writePrefs();
+});
+document.querySelectorAll(".chip[data-basis]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (basis === btn.dataset.basis) return;
+    basis = btn.dataset.basis;
+    pressGroup(".chip[data-basis]", btn);
+    // the score sort groups by this, so it needs rebuilding; elsewhere a repaint will do
+    if (view === "rating") render(); else { applyState(); applyFilter(); }
+  });
+});
 $("wishOnly").addEventListener("click", e => {
   wishOnly = !wishOnly;
   e.currentTarget.setAttribute("aria-pressed", wishOnly ? "true" : "false");
@@ -1012,6 +1097,8 @@ document.querySelectorAll(".chip[data-own]").forEach(b =>
 pressGroup(".chip[data-price]", document.querySelector('.chip[data-price="' + maxPrice + '"]'));
 $("atLow").setAttribute("aria-pressed", atLowOnly ? "true" : "false");
 $("wishOnly").setAttribute("aria-pressed", wishOnly ? "true" : "false");
+pressGroup(".chip[data-basis]", document.querySelector('.chip[data-basis="' + basis + '"]'));
+$("covers").setAttribute("aria-pressed", showCovers ? "true" : "false");
 try { applyTheme(localStorage.getItem(THEME_KEY) || "auto"); } catch(e){ applyTheme("auto"); }
 
 $("nTotal").textContent = DATA.length;

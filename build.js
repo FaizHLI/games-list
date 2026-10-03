@@ -17,7 +17,7 @@ const ROOT = __dirname;
 const rel = p => path.join(ROOT, p);
 const hash = p => crypto.createHash("sha256").update(fs.readFileSync(rel(p))).digest("hex").slice(0, 8);
 
-const ASSETS = ["assets/fonts.css", "assets/app.css", "data/games.js", "data/scores.js", "data/prices.js", "assets/app.js"];
+const ASSETS = ["assets/fonts.css", "assets/app.css", "data/games.js", "data/scores.js", "data/prices.js", "data/reviews.js", "data/meta.js", "assets/app.js"];
 const V = Object.fromEntries(ASSETS.map(a => [a, a + "?v=" + hash(a)]));
 
 // The service worker has to cache the same versioned URLs the pages ask for, or every
@@ -32,7 +32,8 @@ const SHELL = ["./", "./index.html", "./playlist.html", "./manifest.webmanifest"
 const CACHE = "games-list-" + crypto.createHash("sha256")
   .update(ASSETS.concat(FONTS).map(a => hash(a)).join("")).digest("hex").slice(0, 10);
 
-const RATE = "The first score is the IGDB community average, in stars like Backloggd; the blue one " +
+const RATE = "The first score is the players' (IGDB, weighted by how many ratings) or, under More, the critics' " +
+  "(Metacritic); the blue one " +
   "beside it is yours — tap it to rate in half stars. ";
 const TAIL = "Progress is shared with the other list, saves automatically, and can be exported.";
 const CANON_NOTE = "Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for " +
@@ -100,6 +101,11 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <button class="chip" type="button" data-time="20" aria-pressed="false">20h or less</button>
       </div>
       <div class="frow">
+        <span class="flabel">SCORE</span>
+        <button class="chip" type="button" data-basis="players" aria-pressed="true" title="IGDB players, weighted by how many ratings">Players</button>
+        <button class="chip" type="button" data-basis="critics" aria-pressed="false" title="Metacritic critics; games without a Metascore fall back to players">Critics</button>
+      </div>
+      <div class="frow">
         <span class="flabel">PRICE</span>
         <button class="chip" type="button" data-price="0" aria-pressed="true">Any</button>
         <button class="chip" type="button" data-price="5" aria-pressed="false">Under $5</button>
@@ -115,7 +121,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <span class="flabel">SORT</span>
         <button class="chip" type="button" data-view="year" aria-pressed="true">Year</button>
         <button class="chip" type="button" data-view="console" aria-pressed="false">Console</button>
-        <button class="chip" type="button" data-view="rating" aria-pressed="false">IGDB</button>
+        <button class="chip" type="button" data-view="rating" aria-pressed="false">Score</button>
         <button class="chip" type="button" data-view="mine" aria-pressed="false">Mine</button>
         <button class="chip" type="button" data-view="price" aria-pressed="false">Price</button>
       </div>
@@ -125,6 +131,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <button class="chip" type="button" data-own="y" aria-pressed="false">Owned</button>
         <button class="chip" type="button" data-own="n" aria-pressed="false">Not owned</button>
         <button class="chip" type="button" id="wishOnly" aria-pressed="false">Wishlist</button>
+        <button class="chip" type="button" id="covers" aria-pressed="false" title="Box art on every row">Covers</button>
       </div>
     </div>
   </header>
@@ -147,6 +154,8 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
 <script src="${V["data/games.js"]}"></script>
 <script src="${V["data/scores.js"]}"></script>
 <script src="${V["data/prices.js"]}"></script>
+<script src="${V["data/reviews.js"]}"></script>
+<script src="${V["data/meta.js"]}"></script>
 <script src="${V["assets/app.js"]}"></script>
 </body>
 </html>
