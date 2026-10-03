@@ -188,3 +188,6 @@ footer .chip{padding:8px 12px}
 .ctotal dt:first-child,.ctotal dt:first-child+dd{color:var(--ink);font-size:16px}
 #cartBtn{background:var(--play);border-color:var(--play);color:var(--panel)}
 #cartBtn[hidden]{display:none}
+/* price at its lowest ever: the accent, since it's the one tag worth acting on */
+.own.low{border-color:var(--accent);color:var(--accent)}
+.deal{color:var(--accent);font-weight:600}

@@ -35,6 +35,9 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   retail and keyshop price now, and the lowest ever. Games bought as part of a
   collection say so ("Sold as Castlevania Anniversary Collection"). Switch games link
   to Deku Deals, which has no API.
+- **Price filters** (More → Price): under $5 / $10 / $20 on the best price now, and
+  **Lowest ever** for games at their all-time low, which also get a LOWEST tag. Sort
+  by **Price** for cheapest first.
 - **Cart** totals what the games you've added cost now, counting a collection once
   even when several of its games are in the cart. It appears once something is in it.
 - **Pick one** chooses at random from what's on screen and not already finished.

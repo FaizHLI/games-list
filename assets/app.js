@@ -21,6 +21,9 @@ let owned = new Set();
 let cart = new Set();
 let minRating = 0, maxTime = 0, platform = "", query = "", view = "year", hideDone = false;
 let ownFilter = "";   // "" any, "y" owned only, "n" not owned
+// price filter: maxPrice is a ceiling on the best price now (0 = any), atLowOnly keeps
+// games whose price is at its lowest ever. Either one hides games with no price.
+let maxPrice = 0, atLowOnly = false;
 let saveTimer = null;
 let sections = []; // {indices, countEl, secEl}
 
@@ -151,9 +154,11 @@ function readPrefs(){
   if (![0, 4, 4.25, 4.5].includes(minRating)) minRating = 0;
   maxTime = +pick("t", 0) || 0;
   platform = String(pick("p", ""));
-  view = ["year","console","rating","mine"].includes(pick("v", "year")) ? pick("v", "year") : "year";
+  view = ["year","console","rating","mine","price"].includes(pick("v", "year")) ? pick("v", "year") : "year";
   hideDone = String(pick("h", "")) === "1";
   ownFilter = ["y","n"].includes(pick("o", "")) ? pick("o", "") : "";
+  maxPrice = [5, 10, 20].includes(+pick("pr", 0)) ? +pick("pr", 0) : 0;
+  atLowOnly = String(pick("lo", "")) === "1";
 }
 function writePrefs(){
   const p = new URLSearchParams();
@@ -164,10 +169,12 @@ function writePrefs(){
   if (view !== "year") p.set("v", view);
   if (hideDone) p.set("h", "1");
   if (ownFilter) p.set("o", ownFilter);
+  if (maxPrice) p.set("pr", maxPrice);
+  if (atLowOnly) p.set("lo", "1");
   const qs = p.toString();
   history.replaceState(null, "", qs ? "?" + qs : location.pathname);
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ q: query, r: minRating, t: maxTime, p: platform, v: view, h: hideDone ? "1" : "", o: ownFilter }));
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ q: query, r: minRating, t: maxTime, p: platform, v: view, h: hideDone ? "1" : "", o: ownFilter, pr: maxPrice, lo: atLowOnly ? "1" : "" }));
   } catch(e){}
 }
 
@@ -182,12 +189,14 @@ function makeRow(i, showYearInMethod){
   row.setAttribute("role","button");
   row.setAttribute("aria-haspopup","dialog");
   row.setAttribute("tabindex","0");
-  const method = showYearInMethod ? (g[0] + " · " + g[3]) : g[3];
+  let method = showYearInMethod ? (g[0] + " · " + g[3]) : g[3];
+  // sorted by price, the price leads the line, since it is what the list is ordered by
+  if (view === "price" && nowPrice(g) != null) method = money(nowPrice(g)) + " · " + method;
   row.innerHTML =
     "<button class='box' type='button' role='checkbox' aria-checked='false' " +
       "aria-label='Played " + escAttr(g[1]) + "'>&#10003;</button>" +
     "<div class='titles'><span class='title'>" + esc(g[1]) + "</span>" +
-    "<div class='method'><span class='own' hidden>OWNED</span>" + esc(method) + "</div></div>" +
+    "<div class='method'><span class='own' hidden>OWNED</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div></div>" +
     "<button class='mark' type='button' aria-pressed='false' title='Currently playing' " +
       "aria-label='Mark " + escAttr(g[1]) + " as currently playing'>&#9654;</button>" +
     "<div class='time'>" + esc(g[5]) + "</div>" +
@@ -266,6 +275,22 @@ function render(){
       groups[b].sort((x,y) => communityOf(DATA[y]) - communityOf(DATA[x]));
       makeSection(b ? "IGDB " + b + "+" : "IGDB below 3.5", groups[b], true, false);
     }
+  } else if (view === "price") {
+    // cheapest first; what has no price goes last, in IGDB order
+    const BANDS = [[0, "Free"], [5, "Under $5"], [10, "$5 to $10"], [20, "$10 to $20"], [40, "$20 to $40"], [Infinity, "$40 and up"]];
+    const groups = BANDS.map(() => []), none = [];
+    DATA.forEach((g,i) => {
+      const n = nowPrice(g);
+      if (n == null) none.push(i);
+      else groups[BANDS.findIndex(([max], b) => b === 0 ? n === 0 : n < max)].push(i);
+    });
+    groups.forEach((idx, b) => {
+      if (!idx.length) return;
+      idx.sort((x,y) => nowPrice(DATA[x]) - nowPrice(DATA[y]));
+      makeSection(BANDS[b][1], idx, true, false);
+    });
+    none.sort((x,y) => communityOf(DATA[y]) - communityOf(DATA[x]));
+    if (none.length) makeSection("No price", none, true, false);
   } else if (view === "mine") {
     // one section per half star you've given, then everything you haven't rated, in
     // IGDB order so the unrated tail is still worth scrolling
@@ -311,6 +336,7 @@ function paintRow(row, g){
   row.querySelector(".box").setAttribute("aria-checked", s === DONE ? "true" : "false");
   row.querySelector(".mark").setAttribute("aria-pressed", s === PLAYING ? "true" : "false");
   row.querySelector(".own").hidden = !owned.has(keyOf(g));
+  row.querySelector(".low").hidden = !atLowest(g);
 
   // two badges: the community's score, then yours (a faint + until you rate it)
   const c = row.querySelector(".rating"), x = communityOf(g);
@@ -439,6 +465,16 @@ const moneyFmt = new Intl.NumberFormat("en-US", { style: "currency", currency: C
 // 0 is real: free-to-play now, or a giveaway at its lowest
 const money = n => n == null ? "—" : n === 0 ? "Free" : moneyFmt.format(n);
 const lowest = (...xs) => { const v = xs.filter(x => x != null); return v.length ? Math.min(...v) : null; };
+// best price now, retail or keyshop - the number the cart totals and the filter uses
+const nowPrice = g => { const p = priceOf(g); return p ? lowest(p.r, p.k) : null; };
+// At its lowest ever: retail or keyshop is down to the cheapest it has been. A lowest of
+// 0 was a giveaway, which a paid price can never match, so those don't count.
+function atLowest(g){
+  const p = priceOf(g);
+  if (!p) return false;
+  const at = (now, low) => now != null && low != null && low > 0 && now <= low + 0.005;
+  return at(p.r, p.hr) || at(p.k, p.hk);
+}
 const asOfText = () => AS_OF
   ? "Prices as of " + new Date(AS_OF + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
   : "";
@@ -523,6 +559,7 @@ function paintDetail(){
       "<dt>Retail now</dt><dd>" + money(p.r) + "</dd>" +
       "<dt>Keyshops now</dt><dd>" + money(p.k) + "</dd>" +
       "<dt>Lowest ever</dt><dd>" + money(lowest(p.hr, p.hk)) + "</dd></dl>" +
+      (atLowest(g) ? "<p class='snote deal'>At its lowest price ever right now.</p>" : "") +
       "<p class='snote'>" + esc(asOfText()) + " · gg.deals, US prices</p>"
     : "<p class='snote'>" + why + "</p>";
   q(".sstores").innerHTML = storeLinks(g).map(linkHtml).join("");
@@ -702,6 +739,12 @@ function matches(g){
   if (platform && g[4] !== platform) return false;
   if (hideDone && progress.get(keyOf(g)) === DONE) return false;
   if (ownFilter && owned.has(keyOf(g)) !== (ownFilter === "y")) return false;
+  if (maxPrice || atLowOnly) {
+    const n = nowPrice(g);
+    if (n == null) return false;
+    if (maxPrice && n >= maxPrice) return false;
+    if (atLowOnly && !atLowest(g)) return false;
+  }
   if (maxTime) {
     const h = hoursOf(g);
     if (h === null || h > maxTime) return false;   // endless games have no run time to fit
@@ -766,6 +809,18 @@ document.querySelectorAll(".chip[data-view]").forEach(btn => {
   });
 });
 $("platform").addEventListener("change", e => { platform = e.target.value; applyFilter(); });
+document.querySelectorAll(".chip[data-price]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    maxPrice = +btn.dataset.price;
+    pressGroup(".chip[data-price]", btn);
+    applyFilter();
+  });
+});
+$("atLow").addEventListener("click", e => {
+  atLowOnly = !atLowOnly;
+  e.currentTarget.setAttribute("aria-pressed", atLowOnly ? "true" : "false");
+  applyFilter();
+});
 document.querySelectorAll(".chip[data-own]").forEach(btn => {
   btn.addEventListener("click", () => {
     // the two chips are exclusive, and pressing the active one turns it off
@@ -929,6 +984,8 @@ pressGroup(".chip[data-view]", document.querySelector('.chip[data-view="' + view
 $("hideDone").setAttribute("aria-pressed", hideDone ? "true" : "false");
 document.querySelectorAll(".chip[data-own]").forEach(b =>
   b.setAttribute("aria-pressed", b.dataset.own === ownFilter ? "true" : "false"));
+pressGroup(".chip[data-price]", document.querySelector('.chip[data-price="' + maxPrice + '"]'));
+$("atLow").setAttribute("aria-pressed", atLowOnly ? "true" : "false");
 try { applyTheme(localStorage.getItem(THEME_KEY) || "auto"); } catch(e){ applyTheme("auto"); }
 
 $("nTotal").textContent = DATA.length;

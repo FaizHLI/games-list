@@ -100,6 +100,14 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <button class="chip" type="button" data-time="20" aria-pressed="false">20h or less</button>
       </div>
       <div class="frow">
+        <span class="flabel">PRICE</span>
+        <button class="chip" type="button" data-price="0" aria-pressed="true">Any</button>
+        <button class="chip" type="button" data-price="5" aria-pressed="false">Under $5</button>
+        <button class="chip" type="button" data-price="10" aria-pressed="false">Under $10</button>
+        <button class="chip" type="button" data-price="20" aria-pressed="false">Under $20</button>
+        <button class="chip" type="button" id="atLow" aria-pressed="false" title="Retail or keyshop price at its lowest ever">Lowest ever</button>
+      </div>
+      <div class="frow">
         <span class="flabel">PLATFORM</span>
         <select id="platform" aria-label="Filter by platform"><option value="">All platforms</option></select>
       </div>
@@ -109,6 +117,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <button class="chip" type="button" data-view="console" aria-pressed="false">Console</button>
         <button class="chip" type="button" data-view="rating" aria-pressed="false">IGDB</button>
         <button class="chip" type="button" data-view="mine" aria-pressed="false">Mine</button>
+        <button class="chip" type="button" data-view="price" aria-pressed="false">Price</button>
       </div>
       <div class="frow">
         <span class="flabel">SHOW</span>
