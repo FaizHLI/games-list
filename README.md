@@ -23,10 +23,11 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   here". Games marked `∞` are counted separately as endless.
 - **Filters:** search, minimum rating, maximum length, and platform. Sort by year,
   platform, or rating. Hide played.
-- **Ratings** are IGDB community averages (IGDB is the database Backloggd is built
-  on), shown in stars to one decimal like Backloggd. Tap a badge to give your own score
-  in half stars; it replaces the community's for you in the badge, the rating filter and
-  the Rating sort, and is marked with a blue corner.
+- **Two ratings per game, kept apart.** The first badge is the IGDB community average
+  (IGDB is the database Backloggd is built on), in stars to one decimal like Backloggd.
+  The blue one beside it is yours: tap it to rate in half stars. The rating chips filter
+  on IGDB; sort by **IGDB** or by **Mine**, which groups your scores and puts unrated
+  games last.
 - **Pick one** chooses at random from what's on screen and not already finished.
 - **Shared progress.** Both pages read one store, keyed `year|title`. Open in two tabs
   and they stay in sync.

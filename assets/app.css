@@ -83,19 +83,21 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .row.playing .mark{opacity:1;background:var(--play);border-color:var(--play);color:var(--panel)}
 
 .time{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);min-width:30px;text-align:right}
-/* the badge is a button: tap it to rate. Averages need three characters ("4.3"),
-   so it is wider than the old single digit. The border is always there, in the
-   background colour when the tier has none, so every tier has the same box. */
-.rating{flex:none;position:relative;width:30px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700;border:2px solid transparent;background:none;color:var(--ink);cursor:pointer;border-radius:0}
-.rating:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* community score. Averages need three characters ("4.3"), so it is wider than the
+   old single digit. The border is always there, transparent when the tier has none,
+   so every tier has the same box. */
+.rating,.mine{flex:none;width:30px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700;border:2px solid transparent;background:none;color:var(--ink);border-radius:0}
 .r5{background:var(--accent);border-color:var(--accent);color:var(--panel)}
 .r4{background:var(--ink);border-color:var(--ink);color:var(--panel)}
 .r3{border-color:var(--ink);color:var(--ink)}
 .r2{border-color:var(--muted);color:var(--muted)}
 .r1{border-style:dashed;border-color:var(--muted);color:var(--muted)}
-/* your own score: same tier colours, with a corner notch in the playing blue so it
-   never reads as the community's number */
-.rating.mine::after{content:"";position:absolute;top:-2px;right:-2px;border-style:solid;border-width:0 8px 8px 0;border-color:transparent var(--play) transparent transparent}
+/* your score, in the playing blue so it never reads as the community's. Unrated it
+   is a faint + like the play button, so 900-odd empty ones don't shout. */
+.mine{cursor:pointer;margin-left:-6px;border:2px dashed var(--line);color:var(--muted);opacity:.6}
+.mine:hover{opacity:1}
+.mine:focus-visible{opacity:1;outline:2px solid var(--accent);outline-offset:1px}
+.mine.set{opacity:1;border:2px solid var(--play);background:var(--play);color:var(--panel)}
 
 /* rating picker */
 .rater{position:absolute;z-index:20;background:var(--panel);border:2px solid var(--ink);padding:8px;width:min(320px,calc(100vw - 16px));box-shadow:4px 4px 0 var(--ink)}

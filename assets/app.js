@@ -30,13 +30,12 @@ function escAttr(s){ return esc(s).replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 // "∞" means endless: it has no hours to count down and no upper bound to filter on
 const hoursOf = g => g[5] === "∞" ? null : (parseFloat(g[5]) || 0);
 const num = n => n.toLocaleString("en-US");
-// Every rating is in stars, 0.5 to 5. The community score is IGDB's user average
-// (data/scores.js, 0-100) where it has one, and the list's own 1-5 where it doesn't.
-// Your score wins over both everywhere: the badge, the rating filter and the sort.
+// Every rating is in stars, 0.5 to 5. There are two, kept apart everywhere: the
+// community score, IGDB's user average (data/scores.js, 0-100) where it has one and
+// the list's own 1-5 where it doesn't, and yours, null until you rate the game.
 const SCORES = window.SCORES || {};
 const communityOf = g => { const s = SCORES[keyOf(g)]; return s ? s.s / 20 : g[2]; };
 const mineOf = g => { const h = ratings.get(keyOf(g)); return h ? h / 2 : null; };
-const ratingOf = g => mineOf(g) ?? communityOf(g);
 // "4" for whole stars, "4.5" for halves, "4.3" for an average
 const fmtStars = x => (Math.round(x * 10) / 10).toFixed(Number.isInteger(Math.round(x * 10) / 10) ? 0 : 1);
 
@@ -104,7 +103,7 @@ async function load(){
     }
   } catch(e){ /* first run, or storage blocked */ }
   // your scores only arrive now, and the rating filter and sort both depend on them
-  if (view === "rating") render(); else { applyState(); applyFilter(); }
+  if (view === "mine") render(); else { applyState(); applyFilter(); }
   // rewrite v1 data in the current format, so the playing state has somewhere to live,
   // and renamed games under their new keys
   if (rewrite) save();
@@ -132,7 +131,7 @@ function readPrefs(){
   if (![0, 4, 4.25, 4.5].includes(minRating)) minRating = 0;
   maxTime = +pick("t", 0) || 0;
   platform = String(pick("p", ""));
-  view = ["year","console","rating"].includes(pick("v", "year")) ? pick("v", "year") : "year";
+  view = ["year","console","rating","mine"].includes(pick("v", "year")) ? pick("v", "year") : "year";
   hideDone = String(pick("h", "")) === "1";
 }
 function writePrefs(){
@@ -168,17 +167,18 @@ function makeRow(i, showYearInMethod){
     "<button class='mark' type='button' aria-pressed='false' title='Currently playing' " +
       "aria-label='Mark " + escAttr(g[1]) + " as currently playing'>&#9654;</button>" +
     "<div class='time'>" + esc(g[5]) + "</div>" +
-    "<button class='rating' type='button' aria-haspopup='dialog'></button>";
+    "<div class='rating' role='img'></div>" +
+    "<button class='mine' type='button' aria-haspopup='dialog'></button>";
 
   row.addEventListener("click", e => {
-    if (e.target.closest(".mark, .rating")) return;   // these buttons have their own meaning
+    if (e.target.closest(".mark, .mine")) return;   // these buttons have their own meaning
     setStatus(i, row, DONE);
   });
   row.addEventListener("keydown", e => {
     if (e.target !== row) return;   // Enter on a button inside is that button's
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); setStatus(i, row, DONE); }
   });
-  row.querySelector(".rating").addEventListener("click", e => {
+  row.querySelector(".mine").addEventListener("click", e => {
     e.stopPropagation();
     openRater(i, row, e.currentTarget);
   });
@@ -233,11 +233,24 @@ function render(){
     // list in one band. The ends are open: 4.5 and up, and below 3.5, each hold few.
     const band = x => x >= 4.5 ? 4.5 : x >= 3.5 ? Math.floor(x * 4) / 4 : 0;
     const groups = {};
-    DATA.forEach((g,i) => { const b = band(ratingOf(g)); (groups[b] = groups[b] || []).push(i); });
+    DATA.forEach((g,i) => { const b = band(communityOf(g)); (groups[b] = groups[b] || []).push(i); });
     for (const b of Object.keys(groups).map(Number).sort((a,b) => b - a)) {
-      groups[b].sort((x,y) => ratingOf(DATA[y]) - ratingOf(DATA[x]));
-      makeSection(b ? "Rated " + b + "+" : "Below 3.5", groups[b], true, false);
+      groups[b].sort((x,y) => communityOf(DATA[y]) - communityOf(DATA[x]));
+      makeSection(b ? "IGDB " + b + "+" : "IGDB below 3.5", groups[b], true, false);
     }
+  } else if (view === "mine") {
+    // one section per half star you've given, then everything you haven't rated, in
+    // IGDB order so the unrated tail is still worth scrolling
+    const groups = {}, unrated = [];
+    DATA.forEach((g,i) => {
+      const m = mineOf(g);
+      if (m === null) unrated.push(i); else (groups[m] = groups[m] || []).push(i);
+    });
+    for (const m of Object.keys(groups).map(Number).sort((a,b) => b - a)) {
+      makeSection("You: " + fmtStars(m), groups[m], true, false);
+    }
+    unrated.sort((x,y) => communityOf(DATA[y]) - communityOf(DATA[x]));
+    if (unrated.length) makeSection("Not rated yet", unrated, true, false);
   } else {
     const groups = {};
     DATA.forEach((g,i) => { (groups[g[4]] = groups[g[4]] || []).push(i); });
@@ -269,13 +282,16 @@ function paintRow(row, g){
   row.setAttribute("aria-checked", s === DONE ? "true" : s === PLAYING ? "mixed" : "false");
   row.querySelector(".mark").setAttribute("aria-pressed", s === PLAYING ? "true" : "false");
 
-  // the badge shows your score when you have one, the community's otherwise
-  const b = row.querySelector(".rating");
-  const mine = mineOf(g), x = ratingOf(g);
-  b.textContent = fmtStars(x);
-  b.className = "rating " + tierOf(x) + (mine !== null ? " mine" : "");
-  const label = (mine !== null ? "Your rating " + fmtStars(mine) + ". " : "") +
-    communityLabel(g) + ". Rate " + g[1];
+  // two badges: the community's score, then yours (a faint + until you rate it)
+  const c = row.querySelector(".rating"), x = communityOf(g);
+  c.textContent = fmtStars(x);
+  c.className = "rating " + tierOf(x);
+  c.title = communityLabel(g);
+  c.setAttribute("aria-label", communityLabel(g));
+  const b = row.querySelector(".mine"), mine = mineOf(g);
+  b.textContent = mine === null ? "+" : fmtStars(mine);
+  b.classList.toggle("set", mine !== null);
+  const label = mine === null ? "Rate " + g[1] : "Your rating " + fmtStars(mine) + ". Change it";
   b.title = label;
   b.setAttribute("aria-label", label);
 }
@@ -422,7 +438,7 @@ function refresh(){
 /* ---------- filtering ---------- */
 
 function matches(g){
-  if (ratingOf(g) < minRating) return false;
+  if (communityOf(g) < minRating) return false;
   if (query && !g[1].toLowerCase().includes(query)) return false;
   if (platform && g[4] !== platform) return false;
   if (hideDone && progress.get(keyOf(g)) === DONE) return false;
@@ -566,7 +582,7 @@ $("importFile").addEventListener("change", async e => {
   progress = incoming.state;
   ratings = incoming.ratings;
   save();
-  if (view === "rating") render(); else { applyState(); applyFilter(); }
+  if (view === "mine") render(); else { applyState(); applyFilter(); }
   showToast("Imported " + sum(incoming.state, incoming.ratings));
 });
 

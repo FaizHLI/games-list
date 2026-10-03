@@ -13,7 +13,7 @@
 <link rel="preload" href="assets/fonts/public-sans-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/press-start-2p-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts.css?v=8ebdff78">
-<link rel="stylesheet" href="assets/app.css?v=8e892a04">
+<link rel="stylesheet" href="assets/app.css?v=3c5b0a79">
 <script>/* set an explicit theme before first paint so the choice never flashes */
 try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 </head>
@@ -55,7 +55,8 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <span class="flabel">SORT</span>
         <button class="chip" type="button" data-view="year" aria-pressed="true">Year</button>
         <button class="chip" type="button" data-view="console" aria-pressed="false">Console</button>
-        <button class="chip" type="button" data-view="rating" aria-pressed="false">Rating</button>
+        <button class="chip" type="button" data-view="rating" aria-pressed="false">IGDB</button>
+        <button class="chip" type="button" data-view="mine" aria-pressed="false">Mine</button>
       </div>
       <div class="frow">
         <span class="flabel">SHOW</span>
@@ -74,13 +75,13 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <button class="chip" type="button" id="importBtn">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <button class="chip" type="button" id="themeBtn">Theme: AUTO</button>
-    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you are playing now. The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade. Ratings are IGDB community averages, in stars like Backloggd; tap one to give your own, which replaces it for you in filters and sorting. Progress is shared with the other list, saves automatically, and can be exported.</p>
+    <p class="note">Tap a row to mark a game played; the small ▶ marks the one you are playing now. The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade. The first score is the IGDB community average, in stars like Backloggd; the blue one beside it is yours — tap it to rate in half stars. Progress is shared with the other list, saves automatically, and can be exported.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="data/games.js?v=cca8ca2e"></script>
 <script src="data/scores.js?v=4182b0b9"></script>
-<script src="assets/app.js?v=9ea0ada0"></script>
+<script src="assets/app.js?v=e00ed55c"></script>
 </body>
 </html>

@@ -32,8 +32,8 @@ const SHELL = ["./", "./index.html", "./playlist.html", "./manifest.webmanifest"
 const CACHE = "games-list-" + crypto.createHash("sha256")
   .update(ASSETS.concat(FONTS).map(a => hash(a)).join("")).digest("hex").slice(0, 10);
 
-const RATE = "Ratings are IGDB community averages, in stars like Backloggd; tap one to give your own, " +
-  "which replaces it for you in filters and sorting. ";
+const RATE = "The first score is the IGDB community average, in stars like Backloggd; the blue one " +
+  "beside it is yours — tap it to rate in half stars. ";
 const TAIL = "Progress is shared with the other list, saves automatically, and can be exported.";
 const CANON_NOTE = "Tap a row to mark a game played; the small ▶ marks the one you are playing now. " +
   "Line under each title is the recommended way to play: NSO where available, emulator or ports when the " +
@@ -104,7 +104,8 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <span class="flabel">SORT</span>
         <button class="chip" type="button" data-view="year" aria-pressed="true">Year</button>
         <button class="chip" type="button" data-view="console" aria-pressed="false">Console</button>
-        <button class="chip" type="button" data-view="rating" aria-pressed="false">Rating</button>
+        <button class="chip" type="button" data-view="rating" aria-pressed="false">IGDB</button>
+        <button class="chip" type="button" data-view="mine" aria-pressed="false">Mine</button>
       </div>
       <div class="frow">
         <span class="flabel">SHOW</span>
