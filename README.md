@@ -41,6 +41,8 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
 - **Price filters** (More → Price): under $5 / $10 / $20 on the price now, and
   **Lowest ever** for games at their all-time low, which also get a LOWEST tag. Sort
   by **Price** for cheapest first.
+- **Wishlist**: a toggle in the panel, a WISHLIST tag on the row, and a Wishlist chip
+  under More → Show. Wishlist + Lowest ever shows what you want that's at its cheapest.
 - **Cart** totals what the games you've added cost now, counting a collection once
   even when several of its games are in the cart. It appears once something is in it.
 - **Pick one** chooses at random from what's on screen and not already finished.
@@ -125,10 +127,10 @@ matched, worth a skim after adding pins.
 
 ### Marking your Steam library owned
 
-`node tools/fetch-steam-owned.js` reads your Steam library (`STEAM_API_KEY` and
+`node tools/fetch-steam-owned.js` reads your Steam library and wishlist (`STEAM_API_KEY` and
 `STEAM_PROFILE` in `.env.local`, with Game details set to Public) and writes
 `exports/steam-owned-<date>.json`. On the site, Import that file: it adds those games
-to what you own and leaves played marks, ratings and the cart alone. Owning a
+to what you own and want, and leaves played marks, ratings and the cart alone. Owning a
 collection marks every game sold as it.
 
 Progress is stored per `year|title`, so renaming a game or changing its year orphans

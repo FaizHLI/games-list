@@ -124,6 +124,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
         <button class="chip" type="button" id="hideDone" aria-pressed="false">Hide played</button>
         <button class="chip" type="button" data-own="y" aria-pressed="false">Owned</button>
         <button class="chip" type="button" data-own="n" aria-pressed="false">Not owned</button>
+        <button class="chip" type="button" id="wishOnly" aria-pressed="false">Wishlist</button>
       </div>
     </div>
   </header>

@@ -19,11 +19,14 @@ let ratings = new Map();
 let owned = new Set();
 // keys of the games you're thinking of buying; the cart totals their prices
 let cart = new Set();
+// keys of the games you want eventually; unlike the cart, nothing totals them
+let wish = new Set();
 let minRating = 0, maxTime = 0, platform = "", query = "", view = "year", hideDone = false;
 let ownFilter = "";   // "" any, "y" owned only, "n" not owned
 // price filter: maxPrice is a ceiling on the best price now (0 = any), atLowOnly keeps
 // games whose price is at its lowest ever. Either one hides games with no price.
 let maxPrice = 0, atLowOnly = false;
+let wishOnly = false;
 let saveTimer = null;
 let sections = []; // {indices, countEl, secEl}
 
@@ -50,7 +53,7 @@ const fmtStars = x => (Math.round(x * 10) / 10).toFixed(Number.isInteger(Math.ro
 /* ---------- storage ---------- */
 
 function serialize(){
-  return JSON.stringify({ v: 3, s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart] });
+  return JSON.stringify({ v: 3, s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart], w: [...wish] });
 }
 // Accepts the v1 format (a flat array of done keys), v2 (states only) and v3 (states,
 // and optionally ratings, owned games and the cart), so progress saved by any earlier
@@ -59,7 +62,7 @@ function serialize(){
 function parseProgress(raw){
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
   let m;
-  const r = new Map(), o = new Set(), c = new Set();
+  const r = new Map(), o = new Set(), c = new Set(), w = new Set();
   if (Array.isArray(data)) m = new Map(data.map(k => [k, DONE]));
   else {
     const s = data && (data.s || data.state);
@@ -75,6 +78,7 @@ function parseProgress(raw){
     }
     if (Array.isArray(data.o)) for (const k of data.o) if (typeof k === "string") o.add(k);
     if (Array.isArray(data.c)) for (const k of data.c) if (typeof k === "string") c.add(k);
+    if (Array.isArray(data.w)) for (const k of data.w) if (typeof k === "string") w.add(k);
   }
   // a game renamed or re-dated since this was saved keeps its state under the new key
   for (const [from, to] of Object.entries(window.RENAMED || {})) {
@@ -83,9 +87,9 @@ function parseProgress(raw){
       if (!map.has(to)) map.set(to, map.get(from));
       map.delete(from);
     }
-    for (const set of [o, c]) if (set.has(from)) { set.delete(from); set.add(to); }
+    for (const set of [o, c, w]) if (set.has(from)) { set.delete(from); set.add(to); }
   }
-  return { state: m, ratings: r, owned: o, cart: c };
+  return { state: m, ratings: r, owned: o, cart: c, wish: w };
 }
 
 function scheduleSave(){
@@ -121,7 +125,7 @@ async function load(){
     }
     if (raw) {
       const parsed = parseProgress(raw);
-      if (parsed) { progress = parsed.state; ratings = parsed.ratings; owned = parsed.owned; cart = parsed.cart; rewrite = serialize() !== raw; }
+      if (parsed) { progress = parsed.state; ratings = parsed.ratings; owned = parsed.owned; cart = parsed.cart; wish = parsed.wish; rewrite = serialize() !== raw; }
     }
   } catch(e){ /* first run, or storage blocked */ }
   // your scores only arrive now, and the rating filter and sort both depend on them
@@ -136,7 +140,7 @@ window.addEventListener("storage", e => {
   if (e.key !== STORAGE_KEY || e.newValue == null) return;
   try {
     const m = parseProgress(e.newValue);
-    if (m) { progress = m.state; ratings = m.ratings; owned = m.owned; cart = m.cart; applyState(); applyFilter(); paintCartBtn(); }
+    if (m) { progress = m.state; ratings = m.ratings; owned = m.owned; cart = m.cart; wish = m.wish; applyState(); applyFilter(); paintCartBtn(); }
   } catch(err){}
 });
 
@@ -159,6 +163,7 @@ function readPrefs(){
   ownFilter = ["y","n"].includes(pick("o", "")) ? pick("o", "") : "";
   maxPrice = [5, 10, 20].includes(+pick("pr", 0)) ? +pick("pr", 0) : 0;
   atLowOnly = String(pick("lo", "")) === "1";
+  wishOnly = String(pick("w", "")) === "1";
 }
 function writePrefs(){
   const p = new URLSearchParams();
@@ -171,10 +176,11 @@ function writePrefs(){
   if (ownFilter) p.set("o", ownFilter);
   if (maxPrice) p.set("pr", maxPrice);
   if (atLowOnly) p.set("lo", "1");
+  if (wishOnly) p.set("w", "1");
   const qs = p.toString();
   history.replaceState(null, "", qs ? "?" + qs : location.pathname);
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ q: query, r: minRating, t: maxTime, p: platform, v: view, h: hideDone ? "1" : "", o: ownFilter, pr: maxPrice, lo: atLowOnly ? "1" : "" }));
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ q: query, r: minRating, t: maxTime, p: platform, v: view, h: hideDone ? "1" : "", o: ownFilter, pr: maxPrice, lo: atLowOnly ? "1" : "", w: wishOnly ? "1" : "" }));
   } catch(e){}
 }
 
@@ -196,7 +202,7 @@ function makeRow(i, showYearInMethod){
     "<button class='box' type='button' role='checkbox' aria-checked='false' " +
       "aria-label='Played " + escAttr(g[1]) + "'>&#10003;</button>" +
     "<div class='titles'><span class='title'>" + esc(g[1]) + "</span>" +
-    "<div class='method'><span class='own' hidden>OWNED</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div></div>" +
+    "<div class='method'><span class='own' hidden>OWNED</span><span class='own wish' hidden>WISHLIST</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div></div>" +
     "<button class='mark' type='button' aria-pressed='false' title='Currently playing' " +
       "aria-label='Mark " + escAttr(g[1]) + " as currently playing'>&#9654;</button>" +
     "<div class='time'>" + esc(g[5]) + "</div>" +
@@ -337,6 +343,7 @@ function paintRow(row, g){
   row.querySelector(".mark").setAttribute("aria-pressed", s === PLAYING ? "true" : "false");
   row.querySelector(".own").hidden = !owned.has(keyOf(g));
   row.querySelector(".low").hidden = !atLowest(g);
+  row.querySelector(".wish").hidden = !wish.has(keyOf(g));
 
   // two badges: the community's score, then yours (a faint + until you rate it)
   const c = row.querySelector(".rating"), x = communityOf(g);
@@ -513,6 +520,7 @@ detail.innerHTML =
   "<button type='button' class='chip' data-act='done'>Played</button>" +
   "<button type='button' class='chip' data-act='playing'>Playing</button>" +
   "<button type='button' class='chip' data-act='owned'>Owned</button>" +
+  "<button type='button' class='chip' data-act='wish'>Wishlist</button>" +
   "<button type='button' class='chip' data-act='cart'>In cart</button></div>" +
   "<div class='ssec'><div class='shead'><span class='flabel'>YOUR RATING</span>" +
   "<button type='button' class='rclear' data-act='clear'>Clear</button></div>" +
@@ -539,6 +547,7 @@ function paintDetail(){
   press("playing", s === PLAYING);
   press("owned", owned.has(k));
   press("cart", cart.has(k));
+  press("wish", wish.has(k));
   q("[data-act='clear']").hidden = !h;
   detail.querySelectorAll(".rstars button").forEach(b => {
     b.setAttribute("aria-pressed", +b.dataset.h === h ? "true" : "false");
@@ -581,6 +590,7 @@ detail.addEventListener("click", e => {
     case "clear": rateGame(i, 0); break;
     case "owned": toggleIn(owned, i); break;
     case "cart": toggleIn(cart, i); break;
+    case "wish": toggleIn(wish, i); break;
   }
 });
 detail.addEventListener("close", () => {
@@ -594,7 +604,7 @@ function toggleIn(set, i){
   if (set.has(k)) set.delete(k); else set.add(k);
   const row = rowOf(i);
   if (row) paintRow(row, DATA[i]);
-  if (set === owned && ownFilter) applyFilter();
+  if ((set === owned && ownFilter) || (set === wish && wishOnly)) applyFilter();
   scheduleSave();
   paintCartBtn();
   if (detailI === i) paintDetail();
@@ -741,6 +751,7 @@ function matches(g){
   if (platform && g[4] !== platform) return false;
   if (hideDone && progress.get(keyOf(g)) === DONE) return false;
   if (ownFilter && owned.has(keyOf(g)) !== (ownFilter === "y")) return false;
+  if (wishOnly && !wish.has(keyOf(g))) return false;
   if (maxPrice || atLowOnly) {
     const n = nowPrice(g);
     if (n == null) return false;
@@ -818,6 +829,11 @@ document.querySelectorAll(".chip[data-price]").forEach(btn => {
     applyFilter();
   });
 });
+$("wishOnly").addEventListener("click", e => {
+  wishOnly = !wishOnly;
+  e.currentTarget.setAttribute("aria-pressed", wishOnly ? "true" : "false");
+  applyFilter();
+});
 $("atLow").addEventListener("click", e => {
   atLowOnly = !atLowOnly;
   e.currentTarget.setAttribute("aria-pressed", atLowOnly ? "true" : "false");
@@ -883,7 +899,7 @@ function fallbackCopy(text, cb){
 // progress lives in this browser only, so give it a way out and back in
 $("exportBtn").addEventListener("click", () => {
   const payload = { app: "games-list", v: 3, exported: new Date().toISOString(),
-    s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart] };
+    s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart], w: [...wish] };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url;
@@ -901,19 +917,25 @@ $("importFile").addEventListener("change", async e => {
   if (!file) return;
   let text = "", incoming;
   try { text = await file.text(); } catch(err){}
-  // a library file (tools/fetch-steam-owned.js) only says what you own, so it adds to
-  // your owned games and leaves everything else alone
+  // A library file (tools/fetch-steam-owned.js) only says what you own and what's on
+  // your store wishlist, so it adds to those and leaves everything else alone.
   let lib = null;
   try { lib = JSON.parse(text); } catch(err){}
   if (lib && lib.kind === "owned" && Array.isArray(lib.o)) {
-    const add = lib.o.filter(k => typeof k === "string" && !owned.has(k));
-    if (!add.length) { showToast("You already own all " + lib.o.length + " of those"); return; }
-    if (!confirm("Mark " + add.length + " more games as owned" + (lib.source ? " from your " + lib.source[0].toUpperCase() + lib.source.slice(1) + " library" : "") + "?")) return;
-    for (const k of add) owned.add(k);
+    const fresh = k => typeof k === "string";
+    const addOwn = lib.o.filter(k => fresh(k) && !owned.has(k));
+    // a game you own doesn't need wishing for
+    const addWish = (Array.isArray(lib.w) ? lib.w : []).filter(k => fresh(k) && !wish.has(k) && !owned.has(k) && !lib.o.includes(k));
+    if (!addOwn.length && !addWish.length) { showToast("Nothing new in that file"); return; }
+    const from = lib.source ? " from " + lib.source[0].toUpperCase() + lib.source.slice(1) : "";
+    const parts = [addOwn.length && addOwn.length + " owned", addWish.length && addWish.length + " wishlisted"].filter(Boolean).join(" and ");
+    if (!confirm("Add " + parts + from + "?")) return;
+    for (const k of addOwn) owned.add(k);
+    for (const k of addWish) wish.add(k);
     save();
     applyState();
-    if (ownFilter) applyFilter();
-    showToast("Marked " + add.length + " games owned");
+    if (ownFilter || wishOnly) applyFilter();
+    showToast("Added " + parts);
     return;
   }
   try { incoming = parseProgress(text); } catch(err){ incoming = null; }
@@ -926,6 +948,7 @@ $("importFile").addEventListener("change", async e => {
   ratings = incoming.ratings;
   owned = incoming.owned;
   cart = incoming.cart;
+  wish = incoming.wish;
   paintCartBtn();
   save();
   if (view === "mine") render(); else { applyState(); applyFilter(); }
@@ -988,6 +1011,7 @@ document.querySelectorAll(".chip[data-own]").forEach(b =>
   b.setAttribute("aria-pressed", b.dataset.own === ownFilter ? "true" : "false"));
 pressGroup(".chip[data-price]", document.querySelector('.chip[data-price="' + maxPrice + '"]'));
 $("atLow").setAttribute("aria-pressed", atLowOnly ? "true" : "false");
+$("wishOnly").setAttribute("aria-pressed", wishOnly ? "true" : "false");
 try { applyTheme(localStorage.getItem(THEME_KEY) || "auto"); } catch(e){ applyTheme("auto"); }
 
 $("nTotal").textContent = DATA.length;

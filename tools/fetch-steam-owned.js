@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// Reads your Steam library and writes a file that marks those games owned.
+// Reads your Steam library and wishlist and writes a file that marks those games owned
+// and wishlisted.
 //
-// Owned marks live in your browser, so this can't set them directly: it writes
-// exports/steam-owned-<date>.json, and Import on the site adds those games to what you
-// own. Your played marks, ratings and cart are left alone.
+// Those marks live in your browser, so this can't set them directly: it writes
+// exports/steam-owned-<date>.json, and Import on the site adds the games to what you
+// own and want. Your played marks, ratings and cart are left alone.
 //
 // Needs, in .env.local: STEAM_API_KEY (steamcommunity.com/dev/apikey) and
 // STEAM_PROFILE (your profile URL), with Game details set to Public in Steam's privacy
@@ -82,10 +83,26 @@ async function steamId(){
     if (!owned.has(k) && byName.has(norm(g[1]))) { owned.add(k); how.push(k + "  (by name, app " + byName.get(norm(g[1])) + ")"); }
   }
 
+  // The wishlist only lists app ids, so it matches by app alone. A private wishlist
+  // just comes back empty, which isn't worth failing the owned games over.
+  const wished = new Set();
+  try {
+    const wl = await get("https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=" +
+      encodeURIComponent(KEY) + "&steamid=" + sid);
+    const wantApps = new Set(((wl.response && wl.response.items) || []).map(i => i.appid));
+    for (const g of GAMES) {
+      const k = keyOf(g), app = appOf(k);
+      if (app && wantApps.has(app) && !owned.has(k)) { wished.add(k); how.push(k + "  (wishlist, app " + app + ")"); }
+    }
+    console.log(wantApps.size + " games on your Steam wishlist; " + wished.size + " of them are on the list.");
+  } catch (e) {
+    console.log("Couldn't read your Steam wishlist (" + (e.message || e) + "); owned games only.");
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   fs.mkdirSync(rel("exports"), { recursive: true });
   const out = rel("exports/steam-owned-" + today + ".json");
-  fs.writeFileSync(out, JSON.stringify({ app: "games-list", kind: "owned", source: "steam", exported: today, o: [...owned] }, null, 1));
+  fs.writeFileSync(out, JSON.stringify({ app: "games-list", kind: "owned", source: "steam", exported: today, o: [...owned], w: [...wished] }, null, 1));
   console.log(how.join("\n"));
   console.log("\n" + library.length + " games in your Steam library; " + owned.size + " of them are on the list.");
   console.log("Wrote " + path.relative(ROOT, out) + " - on the site, press Import and pick it.");
