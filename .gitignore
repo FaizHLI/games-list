@@ -8,3 +8,6 @@ tools/prices-report.txt
 tools/prices-matches.txt
 tools/reviews-report.txt
 tools/.reviews-run.log
+tools/.steam-reviews-cache.json
+tools/.rawg-cache.json
+tools/.steam-mc-cache.json

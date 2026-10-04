@@ -414,7 +414,8 @@ function paintRow(row, g){
 }
 
 // the old 1-5 colour scale, so a glance down the column still reads as before
-const tierOf = x => "r" + (x >= 4.5 ? 5 : x >= 4 ? 4 : x >= 3 ? 3 : x >= 2 ? 2 : 1);
+// coloured by the number shown, so a 3.95 that reads "4" is coloured as a 4
+const tierOf = x => { x = Math.round(x * 10) / 10; return "r" + (x >= 4.5 ? 5 : x >= 4 ? 4 : x >= 3 ? 3 : x >= 2 ? 2 : 1); };
 // what the badge is showing, in words
 function communityLabel(g){
   if (basis === "critics" && criticsOf(g) !== null) return "Metacritic " + REVIEWS[keyOf(g)].mc + " (critics)";

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Fetches critic and player review data into data/reviews.js:
 //
-//   mc  the Metacritic critic score (Metascore, 0-100), via RAWG, which carries it -
-//       Metacritic has no API of its own
+//   mc  the Metacritic critic score (Metascore, 0-100). Metacritic has no API, so it
+//       comes from Steam's store data for games sold on Steam as themselves (current),
+//       and otherwise from RAWG (whose Metascores stop around 2023)
 //   st  Steam user reviews [positive, total, Steam's summary] for games sold on Steam
 //
 // Needs RAWG_API_KEY in .env.local (rawg.io/apidocs) for Metascores; Steam reviews need
@@ -45,7 +46,8 @@ async function json(url){
     let r;
     try { r = await fetch(url, { signal: AbortSignal.timeout(15000) }); }
     catch (e) { if (attempt < 3) { await sleep(2000); continue; } throw e; }
-    if (r.status === 429 && attempt < 4) { await sleep(2000 * (attempt + 1)); continue; }
+    // rate limits and RAWG's occasional 502s pass; retry them a few times
+    if ((r.status === 429 || r.status >= 500) && attempt < 4) { await sleep(2000 * (attempt + 1)); continue; }
     if (r.status === 404) return null;
     if (!r.ok) throw new Error(url.replace(/key=[^&]+/, "key=…") + " failed: " + r.status);
     return r.json();
@@ -60,16 +62,21 @@ async function steamReviews(app){
   return q && q.total_reviews ? [q.total_positive, q.total_reviews, q.review_score_desc] : null;
 }
 
-const rawg = p => json("https://api.rawg.io/api/" + p + (p.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(RAWG));
+async function rawg(p){
+  const r = await json("https://api.rawg.io/api/" + p + (p.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(RAWG));
+  // a renamed game answers its old slug with {redirect: true, slug: <new>}
+  if (r && r.redirect && r.slug && p.startsWith("games/")) return rawg("games/" + encodeURIComponent(r.slug));
+  return r;
+}
 // a RAWG game that is this one: same name, and released within a year of it
-const fits = (g, r) => r && sameName(r.name, g[1]) && (!r.released || Math.abs(yearOf(r.released) - g[0]) <= 1);
+const fits = (g, r) => !!(r && r.name) && sameName(r.name, g[1]) && (!r.released || Math.abs(yearOf(r.released) - g[0]) <= 1);
 
 async function metascore(g){
   const k = keyOf(g);
   if (k in OVERRIDES) {
-    if (OVERRIDES[k] == null) return { none: true };
+    if (OVERRIDES[k] == null) return { none: true, pin: null };
     const r = await rawg("games/" + encodeURIComponent(OVERRIDES[k]));
-    return r ? { mc: r.metacritic, slug: r.slug } : { bad: true };
+    return r ? { mc: r.metacritic, slug: r.slug, pin: OVERRIDES[k] } : { bad: true, pin: OVERRIDES[k] };
   }
   const igdbSlug = SCORES[k] && SCORES[k].id;
   if (igdbSlug) {
@@ -85,33 +92,80 @@ async function metascore(g){
 (async () => {
   const out = {}, report = [];
 
-  // Steam reviews, once per app: a collection's games share one
+  // Steam reviews, once per app: a collection's games share one. They take a few
+  // minutes, so a run kept for the day lets a rerun after a RAWG hiccup skip them.
   const apps = [...new Set(Object.values(PRICES).map(p => p.app))];
-  const byApp = {};
-  for (let i = 0; i < apps.length; i++) {
-    try { byApp[apps[i]] = await steamReviews(apps[i]); } catch (e) { byApp[apps[i]] = null; }
+  const CACHE = path.join(__dirname, ".steam-reviews-cache.json"), today = new Date().toISOString().slice(0, 10);
+  // kept up to two days, dated by when it was first fetched, so a run that spans
+  // midnight UTC still resumes
+  const fresh = d => !!d && Date.parse(today) - Date.parse(d) <= 2 * 864e5;
+  let byApp = {}, steamDay = today;
+  try { const c = JSON.parse(fs.readFileSync(CACHE, "utf8")); if (fresh(c.day)) { byApp = c.byApp; steamDay = c.day; } } catch (e) {}
+  const todo = apps.filter(a => !(a in byApp));
+  for (let i = 0; i < todo.length; i++) {
+    try { byApp[todo[i]] = await steamReviews(todo[i]); } catch (e) { byApp[todo[i]] = null; }
     await sleep(250);
-    if ((i + 1) % 50 === 0 || i + 1 === apps.length) process.stdout.write("\rSteam reviews " + (i + 1) + "/" + apps.length);
+    if ((i + 1) % 50 === 0 || i + 1 === todo.length) process.stdout.write("\rSteam reviews " + (i + 1) + "/" + todo.length);
   }
-  process.stdout.write("\n");
+  if (todo.length) process.stdout.write("\n");
+  fs.writeFileSync(CACHE, JSON.stringify({ day: steamDay, byApp }));
+
+  // Steam's Metascores, for apps that are the game itself - a collection's score isn't
+  // its games'. Steam allows about 200 of these a 5 minutes, one app per request, so
+  // they're paced and kept like the rest.
+  const MCACHE = path.join(__dirname, ".steam-mc-cache.json");
+  let mcByApp = {}, mcDay = today;
+  try { const c = JSON.parse(fs.readFileSync(MCACHE, "utf8")); if (fresh(c.day)) { mcByApp = c.mcByApp; mcDay = c.day; } } catch (e) {}
+  const saveMc = () => fs.writeFileSync(MCACHE, JSON.stringify({ day: mcDay, mcByApp }));
+  const ownApps = [...new Set(Object.values(PRICES).filter(p => !p.t).map(p => p.app))].filter(a => !(a in mcByApp));
+  for (let i = 0; i < ownApps.length; i++) {
+    try {
+      const j = await json("https://store.steampowered.com/api/appdetails?appids=" + ownApps[i] + "&filters=metacritic");
+      const d = j && j[ownApps[i]];
+      mcByApp[ownApps[i]] = d && d.success && d.data && d.data.metacritic ? d.data.metacritic.score : null;
+    } catch (e) { /* left out, so the next run asks again */ }
+    if (i % 20 === 0) saveMc();
+    await sleep(1600);
+    if ((i + 1) % 25 === 0 || i + 1 === ownApps.length) process.stdout.write("\rSteam Metascores " + (i + 1) + "/" + ownApps.length);
+  }
+  if (ownApps.length) process.stdout.write("\n");
+  saveMc();
+
+  // RAWG answers are kept for the day too, saved as they come, so a run that's cut off
+  // carries on from where it stopped instead of starting over
+  const RCACHE = path.join(__dirname, ".rawg-cache.json");
+  let byGame = {}, rawgDay = today;
+  try { const c = JSON.parse(fs.readFileSync(RCACHE, "utf8")); if (fresh(c.day)) { byGame = c.byGame; rawgDay = c.day; } } catch (e) {}
+  const saveRawg = () => fs.writeFileSync(RCACHE, JSON.stringify({ day: rawgDay, byGame }));
 
   let mcCount = 0;
   for (let i = 0; i < GAMES.length; i++) {
     const g = GAMES[i], k = keyOf(g), rec = {};
     const p = PRICES[k];
     if (p && byApp[p.app]) rec.st = byApp[p.app];
+    const steamMc = p && !p.t ? mcByApp[p.app] : null;
+    if (steamMc) { rec.mc = steamMc; mcCount++; }
     if (RAWG) {
-      const m = await metascore(g);
-      await sleep(150);
-      if (m.mc) { rec.mc = m.mc; mcCount++; }
-      if (m.miss) report.push("UNMATCHED  " + k + "  candidates: " + m.miss.join("; "));
+      let m = byGame[k];
+      // a pin added since the cached answer was fetched has to be asked again
+      if (!m || m.error || (k in OVERRIDES && m.pin !== OVERRIDES[k])) {
+        try { m = await metascore(g); } catch (e) { m = { error: e.message || String(e) }; }
+        byGame[k] = m;
+        if (i % 20 === 0) saveRawg();
+        await sleep(150);
+      }
+      if (m.mc && !rec.mc) { rec.mc = m.mc; mcCount++; }
+      if (rec.mc) { /* scored, by Steam or RAWG */ }
+      else if (m.error) report.push("ERROR      " + k + "  " + m.error);
+      else if (m.miss) report.push("UNMATCHED  " + k + "  candidates: " + m.miss.join("; "));
       else if (m.bad) report.push("BAD SLUG   " + k + "  -> " + OVERRIDES[k]);
       else if (!m.mc && !m.none) report.push("NO SCORE   " + k + "  (rawg " + m.slug + ")");
-    } else if (OLD[k] && OLD[k].mc) { rec.mc = OLD[k].mc; mcCount++; }
+    } else if (!rec.mc && OLD[k] && OLD[k].mc) { rec.mc = OLD[k].mc; mcCount++; }
     if (Object.keys(rec).length) out[k] = rec;
     if (RAWG && ((i + 1) % 50 === 0 || i + 1 === GAMES.length)) process.stdout.write("\rMetascores " + (i + 1) + "/" + GAMES.length);
   }
   process.stdout.write("\n");
+  if (RAWG) saveRawg();
 
   const sorted = Object.fromEntries(Object.entries(out).sort(([a], [b]) => a.localeCompare(b)));
   fs.writeFileSync(rel("data/reviews.js"),

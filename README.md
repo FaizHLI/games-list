@@ -80,7 +80,7 @@ tools/igdb-overrides.json  hand-pinned IGDB ids for games the matcher gets wrong
 data/prices.js         gg.deals price snapshot -> window.PRICES (generated, don't edit)
 tools/fetch-prices.js  regenerates data/prices.js
 tools/steam-overrides.json  hand-pinned Steam app ids: collections, remasters, misses
-data/reviews.js        Metascores (via RAWG) and Steam reviews -> window.REVIEWS (generated)
+data/reviews.js        Metascores (Steam, else RAWG) and Steam reviews -> window.REVIEWS (generated)
 tools/fetch-reviews.js regenerates data/reviews.js; RAWG_API_KEY in .env.local
 tools/rawg-overrides.json  hand-pinned RAWG slugs for games the matcher gets wrong
 data/meta.js           IGDB box art, genres, developer, summary -> window.META (generated)
