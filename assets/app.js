@@ -7,10 +7,12 @@ const STORAGE_KEY = "games-list-progress-v1";
 const PREFS_KEY = "games-list-prefs-v1";
 const THEME_KEY = "games-list-theme-v1";
 
-const PLAYING = 1, DONE = 2;
+// SHELVED is a game you started and chose to drop: out of the picks and the hours
+// left, without counting as played.
+const PLAYING = 1, DONE = 2, SHELVED = 3;
 const keyOf = g => g[0] + "|" + g[1];
 
-// key -> PLAYING | DONE. Absent means untouched.
+// key -> PLAYING | DONE | SHELVED. Absent means untouched.
 let progress = new Map();
 // key -> 1..10, your own score in half stars (7 is 3.5 stars), the Backloggd scale.
 // Absent means you haven't rated it, and the community score stands.
@@ -21,6 +23,9 @@ let owned = new Set();
 let cart = new Set();
 // keys of the games you want eventually; unlike the cart, nothing totals them
 let wish = new Set();
+// key -> {t: where you are, in your words, d: the day you wrote it}. Shown on the row
+// while the game is playing, so the finish line stays in sight.
+let notes = new Map();
 let minRating = 0, maxTime = 0, platform = "", query = "", view = "year", hideDone = false;
 let ownFilter = "";   // "" any, "y" owned only, "n" not owned
 // price filter: maxPrice is a ceiling on the best price now (0 = any), atLowOnly keeps
@@ -80,7 +85,7 @@ const fmtStars = x => (Math.round(x * 10) / 10).toFixed(Number.isInteger(Math.ro
 /* ---------- storage ---------- */
 
 function serialize(){
-  return JSON.stringify({ v: 3, s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart], w: [...wish] });
+  return JSON.stringify({ v: 3, s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart], w: [...wish], n: Object.fromEntries(notes) });
 }
 // Accepts the v1 format (a flat array of done keys), v2 (states only) and v3 (states,
 // and optionally ratings, owned games and the cart), so progress saved by any earlier
@@ -89,7 +94,7 @@ function serialize(){
 function parseProgress(raw){
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
   let m;
-  const r = new Map(), o = new Set(), c = new Set(), w = new Set();
+  const r = new Map(), o = new Set(), c = new Set(), w = new Set(), n = new Map();
   if (Array.isArray(data)) m = new Map(data.map(k => [k, DONE]));
   else {
     const s = data && (data.s || data.state);
@@ -97,7 +102,7 @@ function parseProgress(raw){
     m = new Map();
     for (const [k, v] of Object.entries(s)) {
       const n = +v;
-      if (n === PLAYING || n === DONE) m.set(k, n);
+      if (n === PLAYING || n === DONE || n === SHELVED) m.set(k, n);
     }
     for (const [k, v] of Object.entries(data.r || {})) {
       const n = +v;
@@ -106,17 +111,20 @@ function parseProgress(raw){
     if (Array.isArray(data.o)) for (const k of data.o) if (typeof k === "string") o.add(k);
     if (Array.isArray(data.c)) for (const k of data.c) if (typeof k === "string") c.add(k);
     if (Array.isArray(data.w)) for (const k of data.w) if (typeof k === "string") w.add(k);
+    for (const [k, v] of Object.entries(data.n || {})) {
+      if (v && typeof v.t === "string" && v.t.trim()) n.set(k, { t: v.t.slice(0, 120), d: typeof v.d === "string" ? v.d : "" });
+    }
   }
   // a game renamed or re-dated since this was saved keeps its state under the new key
   for (const [from, to] of Object.entries(window.RENAMED || {})) {
-    for (const map of [m, r]) {
+    for (const map of [m, r, n]) {
       if (!map.has(from)) continue;
       if (!map.has(to)) map.set(to, map.get(from));
       map.delete(from);
     }
     for (const set of [o, c, w]) if (set.has(from)) { set.delete(from); set.add(to); }
   }
-  return { state: m, ratings: r, owned: o, cart: c, wish: w };
+  return { state: m, ratings: r, owned: o, cart: c, wish: w, notes: n };
 }
 
 function scheduleSave(){
@@ -152,7 +160,7 @@ async function load(){
     }
     if (raw) {
       const parsed = parseProgress(raw);
-      if (parsed) { progress = parsed.state; ratings = parsed.ratings; owned = parsed.owned; cart = parsed.cart; wish = parsed.wish; rewrite = serialize() !== raw; }
+      if (parsed) { progress = parsed.state; ratings = parsed.ratings; owned = parsed.owned; cart = parsed.cart; wish = parsed.wish; notes = parsed.notes; rewrite = serialize() !== raw; }
     }
   } catch(e){ /* first run, or storage blocked */ }
   // your scores only arrive now, and the rating filter and sort both depend on them
@@ -167,7 +175,7 @@ window.addEventListener("storage", e => {
   if (e.key !== STORAGE_KEY || e.newValue == null) return;
   try {
     const m = parseProgress(e.newValue);
-    if (m) { progress = m.state; ratings = m.ratings; owned = m.owned; cart = m.cart; wish = m.wish; applyState(); applyFilter(); paintCartBtn(); }
+    if (m) { progress = m.state; ratings = m.ratings; owned = m.owned; cart = m.cart; wish = m.wish; notes = m.notes; applyState(); applyFilter(); paintCartBtn(); }
   } catch(err){}
 });
 
@@ -237,7 +245,8 @@ function makeRow(i, showYearInMethod){
       ? "<img class='thumb' src='" + coverUrl(META[keyOf(g)].c, "t_cover_small") + "' alt='' loading='lazy' decoding='async'>"
       : "<span class='thumb'></span>") : "") +
     "<div class='titles'><span class='title'>" + esc(g[1]) + "</span>" +
-    "<div class='method'><span class='own' hidden>OWNED</span><span class='own wish' hidden>WISHLIST</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div></div>" +
+    "<div class='method'><span class='own' hidden>OWNED</span><span class='own shelf' hidden>SHELVED</span><span class='own wish' hidden>WISHLIST</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div>" +
+    "<div class='pnote' hidden></div></div>" +
     // only what you can buy gets a cart button; the rest keep the space so columns align
     (storeLinks(g).length
       ? "<button class='buy' type='button' aria-pressed='false' title='Add to cart' " +
@@ -375,18 +384,80 @@ function render(){
 // one clears whatever the game was before, so the two states stay exclusive.
 function setStatus(i, row, want){
   const k = keyOf(DATA[i]);
+  // One game at a time keeps the momentum. Starting a second asks what to do with the
+  // first, across both lists, since they share one store.
+  if (want === PLAYING && progress.get(k) !== PLAYING) {
+    const others = [...progress].filter(([o, s]) => s === PLAYING && o !== k).map(([o]) => o);
+    if (others.length) { askSwitch(i, others); return; }
+  }
   if (progress.get(k) === want) progress.delete(k); else progress.set(k, want);
+  afterStatus(i, row || rowOf(i));
+}
+function afterStatus(i, row){
   if (row) paintRow(row, DATA[i]);
   refresh();
   if (hideDone) applyFilter();
   scheduleSave();
   if (detailI === i) paintDetail();
 }
+// a key's title, and its row on this page if it has one (the other list's games don't)
+const titleOfKey = k => k.slice(k.indexOf("|") + 1);
+const indexOfKey = k => DATA.findIndex(g => keyOf(g) === k);
+
+/* ---------- already playing something ---------- */
+
+const switchDlg = document.createElement("dialog");
+switchDlg.className = "sheet";
+switchDlg.setAttribute("aria-labelledby", "swTitle");
+document.body.appendChild(switchDlg);
+let switchFor = null;   // {i, others}
+
+function askSwitch(i, others){
+  switchFor = { i, others };
+  const names = others.map(k => "<b>" + esc(titleOfKey(k)) + "</b>").join(" and ");
+  const it = others.length === 1 ? "it" : "them";
+  switchDlg.innerHTML =
+    "<div class='stop'><div class='stitles'><h2 id='swTitle'>Start " + esc(DATA[i][1]) + "?</h2></div>" +
+    "<button type='button' class='sclose' aria-label='Cancel'>&times;</button></div>" +
+    "<p class='smethod'>You're already playing " + names + ". One game at a time is easier to finish.</p>" +
+    "<div class='sacts'>" +
+    "<button type='button' class='chip' data-sw='" + SHELVED + "'>Shelve " + it + "</button>" +
+    "<button type='button' class='chip' data-sw='" + DONE + "'>Mark " + it + " played</button>" +
+    "<button type='button' class='chip' data-sw='both'>Play both</button>" +
+    "<button type='button' class='chip' data-sw='cancel'>Cancel</button></div>";
+  switchDlg.showModal();
+  switchDlg.querySelector("[data-sw]").focus();
+}
+switchDlg.addEventListener("click", e => {
+  if (e.target === switchDlg) { switchDlg.close(); return; }
+  const b = e.target.closest("button");
+  if (!b || !switchFor) return;
+  const { i, others } = switchFor, act = b.dataset.sw;
+  if (b.classList.contains("sclose") || act === "cancel") { switchDlg.close(); return; }
+  switchDlg.close();
+  if (act !== "both") {
+    for (const k of others) {
+      progress.set(k, +act);
+      const j = indexOfKey(k);
+      if (j >= 0 && rowOf(j)) paintRow(rowOf(j), DATA[j]);
+    }
+  }
+  progress.set(keyOf(DATA[i]), PLAYING);
+  afterStatus(i, rowOf(i));
+  const what = act === "both" ? "" : (+act === SHELVED ? " · shelved " : " · marked played ") + others.map(titleOfKey).join(", ");
+  showToast("Playing " + DATA[i][1] + what);
+});
+switchDlg.addEventListener("close", () => { switchFor = null; });
 
 function paintRow(row, g){
   const s = progress.get(keyOf(g)) || 0;
   row.classList.toggle("done", s === DONE);
   row.classList.toggle("playing", s === PLAYING);
+  row.classList.toggle("shelved", s === SHELVED);
+  row.querySelector(".shelf").hidden = s !== SHELVED;
+  const pn = row.querySelector(".pnote"), note = notes.get(keyOf(g));
+  pn.hidden = !(s === PLAYING && note);
+  pn.textContent = s === PLAYING && note ? note.t : "";
   row.querySelector(".box").setAttribute("aria-checked", s === DONE ? "true" : "false");
   row.querySelector(".mark").setAttribute("aria-pressed", s === PLAYING ? "true" : "false");
   const buy = row.querySelector("button.buy");
@@ -578,9 +649,13 @@ detail.innerHTML =
   "<div class='sacts'>" +
   "<button type='button' class='chip' data-act='done'>Played</button>" +
   "<button type='button' class='chip' data-act='playing'>Playing</button>" +
+  "<button type='button' class='chip' data-act='shelved' title='Started and dropped: out of the picks and the hours left'>Shelved</button>" +
   "<button type='button' class='chip' data-act='owned'>Owned</button>" +
   "<button type='button' class='chip' data-act='wish'>Wishlist</button>" +
   "<button type='button' class='chip' data-act='cart'>In cart</button></div>" +
+  "<div class='ssec sprog' hidden><label class='flabel' for='pInput'>WHERE YOU ARE</label>" +
+  "<input type='text' id='pInput' class='pinput' maxlength='120' autocomplete='off' " +
+  "placeholder='Chapter, area, percent, next boss'><p class='snote pdate'></p></div>" +
   "<div class='ssec'><div class='shead'><span class='flabel'>YOUR RATING</span>" +
   "<button type='button' class='rclear' data-act='clear'>Clear</button></div>" +
   "<div class='rstars'>" + starButtons() + "</div></div>" +
@@ -609,6 +684,14 @@ function paintDetail(){
   const press = (act, on) => q("[data-act='" + act + "']").setAttribute("aria-pressed", on ? "true" : "false");
   press("done", s === DONE);
   press("playing", s === PLAYING);
+  press("shelved", s === SHELVED);
+  // progress notes are for the game you're on now
+  const note = notes.get(k), input = q(".pinput");
+  q(".sprog").hidden = s !== PLAYING;
+  if (document.activeElement !== input) input.value = note ? note.t : "";
+  q(".pdate").textContent = note && note.d
+    ? "Updated " + new Date(note.d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : "Shows on the row while you play, so you can see how far you've come.";
   press("owned", owned.has(k));
   press("cart", cart.has(k));
   press("wish", wish.has(k));
@@ -658,11 +741,23 @@ detail.addEventListener("click", e => {
   switch (b.dataset.act) {
     case "done": setStatus(i, rowOf(i), DONE); break;
     case "playing": setStatus(i, rowOf(i), PLAYING); break;
+    case "shelved": setStatus(i, rowOf(i), SHELVED); break;
     case "clear": rateGame(i, 0); break;
     case "owned": toggleIn(owned, i); break;
     case "cart": toggleIn(cart, i); break;
     case "wish": toggleIn(wish, i); break;
   }
+});
+detail.querySelector(".pinput").addEventListener("input", e => {
+  if (detailI === null) return;
+  const k = keyOf(DATA[detailI]), t = e.target.value.trim();
+  const today = new Date(), pad = x => String(x).padStart(2, "0");
+  if (t) notes.set(k, { t, d: today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate()) });
+  else notes.delete(k);
+  const row = rowOf(detailI);
+  if (row) paintRow(row, DATA[detailI]);
+  detail.querySelector(".pdate").textContent = t ? "Updated today" : "";
+  scheduleSave();
 });
 detail.addEventListener("close", () => {
   const row = detailI !== null && rowOf(detailI);
@@ -792,13 +887,14 @@ function refresh(){
 
   // stats describe what is currently on screen, so filtering to one platform
   // answers "how long is what's left here"
-  let shown = 0, sDone = 0, sPlaying = 0, sRated = 0, left = 0, endless = 0;
+  let shown = 0, sDone = 0, sPlaying = 0, sShelved = 0, sRated = 0, left = 0, endless = 0;
   for (const g of DATA) {
     if (!matches(g)) continue;
     shown++;
     if (ratings.has(keyOf(g))) sRated++;
     const s = progress.get(keyOf(g));
     if (s === DONE) { sDone++; continue; }
+    if (s === SHELVED) { sShelved++; continue; }
     if (s === PLAYING) sPlaying++;
     const h = hoursOf(g);
     if (h === null) endless++; else left += h;
@@ -806,6 +902,7 @@ function refresh(){
   const parts = ["<b>" + num(shown) + "</b> shown"];
   if (sDone) parts.push("<b>" + num(sDone) + "</b> done");
   if (sPlaying) parts.push("<b>" + num(sPlaying) + "</b> playing");
+  if (sShelved) parts.push("<b>" + num(sShelved) + "</b> shelved");
   if (sRated) parts.push("<b>" + num(sRated) + "</b> rated");
   parts.push("<b>" + num(Math.round(left)) + "h</b> left");
   if (endless) parts.push(num(endless) + " endless");
@@ -820,7 +917,7 @@ function matches(g){
   if (communityOf(g) < minRating) return false;
   if (query && !g[1].toLowerCase().includes(query)) return false;
   if (platform && g[4] !== platform) return false;
-  if (hideDone && progress.get(keyOf(g)) === DONE) return false;
+  if (hideDone && [DONE, SHELVED].includes(progress.get(keyOf(g)))) return false;
   if (ownFilter && owned.has(keyOf(g)) !== (ownFilter === "y")) return false;
   if (wishOnly && !wish.has(keyOf(g))) return false;
   if (maxPrice || atLowOnly) {
@@ -945,24 +1042,69 @@ $("toggleFilters").addEventListener("click", e => {
   e.currentTarget.setAttribute("aria-expanded", open ? "true" : "false");
 });
 
-// pick something to play from whatever is on screen and not already finished
-$("shuffle").addEventListener("click", () => {
-  const rows = [...list.querySelectorAll(".row")]
-    .filter(r => r.style.display !== "none" && !r.classList.contains("done"));
-  if (!rows.length) { showToast("Nothing left to pick"); return; }
-  const row = rows[Math.floor(Math.random() * rows.length)];
-  document.querySelectorAll(".row.picked").forEach(r => r.classList.remove("picked"));
-  void row.offsetWidth;   // restart the highlight if the same row comes up twice
-  row.classList.add("picked");
-  row.scrollIntoView({ block: "center", behavior: "smooth" });
-  showToast(DATA[row.dataset.i][1]);
+// Three random games from what's on screen and not yet started, finished or shelved.
+// A short list to choose from keeps the choice yours without the whole backlog at once.
+const pickDlg = document.createElement("dialog");
+pickDlg.className = "sheet";
+pickDlg.setAttribute("aria-labelledby", "pTitle");
+document.body.appendChild(pickDlg);
+
+function pickPool(){
+  return [...list.querySelectorAll(".row")]
+    .filter(r => r.style.display !== "none" && !progress.has(keyOf(DATA[r.dataset.i])))
+    .map(r => +r.dataset.i);
+}
+function paintPick(){
+  const pool = pickPool();
+  // a partial shuffle: the first three of a random order
+  for (let j = 0; j < Math.min(3, pool.length); j++) {
+    const r = j + Math.floor(Math.random() * (pool.length - j));
+    [pool[j], pool[r]] = [pool[r], pool[j]];
+  }
+  const picks = pool.slice(0, 3);
+  const card = i => {
+    const g = DATA[i], m = META[keyOf(g)];
+    return "<li>" + (m && m.c ? "<img class='pcover' src='" + coverUrl(m.c, "t_cover_small") + "' alt=''>" : "<span class='pcover'></span>") +
+      "<div class='ctitle'><button type='button' class='clink' data-open='" + i + "'>" + esc(g[1]) + "</button>" +
+      "<span class='csub'>" + esc([g[0], g[4], g[5] === "∞" ? "endless" : g[5], fmtStars(communityOf(g)) + "★"].join(" · ")) + "</span>" +
+      "<span class='csub'>" + esc(g[3]) + "</span></div>" +
+      "<button type='button' class='chip' data-play='" + i + "'>Play</button></li>";
+  };
+  pickDlg.innerHTML =
+    "<div class='stop'><div class='stitles'><h2 id='pTitle'>Pick one of these</h2><p class='smeta'>From the " +
+      num(pool.length) + (pool.length === 1 ? " game" : " games") + " on screen you haven't started</p></div>" +
+    "<button type='button' class='sclose' aria-label='Close'>&times;</button></div>" +
+    (picks.length ? "<ul class='clist plist'>" + picks.map(card).join("") + "</ul>"
+      : "<p class='snote'>Nothing left to pick. Try loosening the filters.</p>") +
+    "<div class='sacts'>" + (pool.length > 3 ? "<button type='button' class='chip' data-reroll>Three more</button>" : "") + "</div>";
+}
+pickDlg.addEventListener("click", e => {
+  if (e.target === pickDlg) { pickDlg.close(); return; }
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.classList.contains("sclose")) pickDlg.close();
+  else if (b.hasAttribute("data-reroll")) paintPick();
+  else if (b.dataset.open) { pickDlg.close(); openDetail(+b.dataset.open); }
+  else if (b.dataset.play) {
+    const i = +b.dataset.play, row = rowOf(i);
+    pickDlg.close();
+    if (row) {
+      document.querySelectorAll(".row.picked").forEach(r => r.classList.remove("picked"));
+      void row.offsetWidth;   // restart the highlight if the same row comes up twice
+      row.classList.add("picked");
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    setStatus(i, row, PLAYING);
+    if (progress.get(keyOf(DATA[i])) === PLAYING) showToast("Playing " + DATA[i][1]);
+  }
 });
+$("shuffle").addEventListener("click", () => { paintPick(); pickDlg.showModal(); });
 
 /* ---------- copy, export, import ---------- */
 
 function copyList(done){
   const lines = DATA
-    .filter(g => (progress.get(keyOf(g)) === DONE) === done)
+    .filter(g => done ? progress.get(keyOf(g)) === DONE : ![DONE, SHELVED].includes(progress.get(keyOf(g))))
     .map(g => g[1] + " (" + g[0] + ")");
   const text = lines.join("\n");
   const finish = () => showToast(lines.length + " titles copied");
@@ -985,7 +1127,7 @@ function fallbackCopy(text, cb){
 // progress lives in this browser only, so give it a way out and back in
 $("exportBtn").addEventListener("click", () => {
   const payload = { app: "games-list", v: 3, exported: new Date().toISOString(),
-    s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart], w: [...wish] };
+    s: Object.fromEntries(progress), r: Object.fromEntries(ratings), o: [...owned], c: [...cart], w: [...wish], n: Object.fromEntries(notes) };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url;
@@ -1035,6 +1177,7 @@ $("importFile").addEventListener("change", async e => {
   owned = incoming.owned;
   cart = incoming.cart;
   wish = incoming.wish;
+  notes = incoming.notes;
   paintCartBtn();
   save();
   if (view === "mine") render(); else { applyState(); applyFilter(); }

@@ -13,7 +13,7 @@
 <link rel="preload" href="assets/fonts/public-sans-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/press-start-2p-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts.css?v=8ebdff78">
-<link rel="stylesheet" href="assets/app.css?v=13a80935">
+<link rel="stylesheet" href="assets/app.css?v=9ecb166b">
 <script>/* set an explicit theme before first paint so the choice never flashes */
 try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 </head>
@@ -36,7 +36,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <button class="chip" type="button" data-min="4" aria-pressed="false">4+</button>
       <button class="chip" type="button" data-min="4.25" aria-pressed="false">4.25+</button>
       <button class="chip" type="button" data-min="4.5" aria-pressed="false">4.5+</button>
-      <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
+      <button class="chip" type="button" id="shuffle" title="Three random games from what is shown that you have not started">Pick 3</button>
       <button class="chip" type="button" id="cartBtn" hidden title="Games in your cart and what they cost now">Cart</button>
       <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
@@ -75,7 +75,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       </div>
       <div class="frow">
         <span class="flabel">SHOW</span>
-        <button class="chip" type="button" id="hideDone" aria-pressed="false">Hide played</button>
+        <button class="chip" type="button" id="hideDone" aria-pressed="false" title="Hides played and shelved games">Hide played</button>
         <button class="chip" type="button" data-own="y" aria-pressed="false">Owned</button>
         <button class="chip" type="button" data-own="n" aria-pressed="false">Not owned</button>
         <button class="chip" type="button" id="wishOnly" aria-pressed="false">Wishlist</button>
@@ -94,7 +94,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
     <button class="chip" type="button" id="importBtn">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <button class="chip" type="button" id="themeBtn">Theme: AUTO</button>
-    <p class="note">Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for its prices, store links, owned and cart. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. The first score is the players' (IGDB, weighted by how many ratings) or, under More, the critics' (Metacritic); the blue one beside it is yours — tap it to rate in half stars. Progress is shared with the other list, saves automatically, and can be exported.</p>
+    <p class="note">Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for its prices, store links, owned and cart, to shelve it, or to note where you are. Line under each title is the recommended way to play: NSO where available, emulator or ports when the game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. Scope is home console and PC — mobile and annual sports releases are deliberately out. The first score is the players' (IGDB, weighted by how many ratings) or, under More, the critics' (Metacritic); the blue one beside it is yours — tap it to rate in half stars. Progress is shared with the other list, saves automatically, and can be exported.</p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -104,6 +104,6 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
 <script src="data/prices.js?v=e77ea923"></script>
 <script src="data/reviews.js?v=890dad4a"></script>
 <script src="data/meta.js?v=65b387e3"></script>
-<script src="assets/app.js?v=a2aa9fa5"></script>
+<script src="assets/app.js?v=9f40f2c8"></script>
 </body>
 </html>
