@@ -46,6 +46,8 @@ const OVERRIDES = fs.existsSync(rel("tools/igdb-overrides.json"))
   ? JSON.parse(fs.readFileSync(rel("tools/igdb-overrides.json"), "utf8")) : {};
 
 const keyOf = g => g[0] + "|" + g[1];
+// a merged row ("Pokémon Black / White") is looked up as the entry these sites know
+const nameOf = g => (window.LOOKUP_AS || {})[keyOf(g)] || g[1];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 // "Pokémon: Let's Go, Pikachu!" and "Pokemon Lets Go Pikachu" are the same name
 const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
@@ -83,7 +85,7 @@ async function igdb(tok, endpoint, body){
 // right year (give or take one, for regional releases) is a match; a same-name game
 // from far off is usually the remake or the original of the one we mean.
 function pick(g, cands){
-  const want = norm(g[1]);
+  const want = norm(nameOf(g));
   let best = null, bestScore = 0;
   for (const c of cands) {
     const y = yearOf(c), name = norm(c.name);
@@ -141,7 +143,7 @@ function pick(g, cands){
   // one request per game: multiquery accepts `search` but silently returns nothing
   for (let i = 0; i < search.length; i++) {
     const g = search[i];
-    const res = await igdb(tok, "games", FIELDS + " search " + quote(g[1].replace(/\s*\([^)]*\)/g, "")) + "; limit 25;");
+    const res = await igdb(tok, "games", FIELDS + " search " + quote(nameOf(g).replace(/\s*\([^)]*\)/g, "")) + "; limit 25;");
     const c = pick(g, res);
     if (c) take(g, c);
     else report.push("UNMATCHED  " + keyOf(g) + "  candidates: " +
