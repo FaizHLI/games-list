@@ -213,3 +213,18 @@ span.thumb{opacity:.4}
 .sgenre{font-size:12px;color:var(--muted);margin-top:4px}
 .sgenre:empty,.ssum:empty{display:none}
 .ssum{font-size:13px;line-height:1.45;margin-top:8px}
+
+/* shelved: started and dropped. Faded, so it reads as set aside rather than done */
+.row.shelved{opacity:.6}
+.row.shelved .title{text-decoration:line-through;text-decoration-color:var(--muted)}
+.own.shelf{border-color:var(--muted);color:var(--muted)}
+/* where you are in the game you're playing, under its title */
+.pnote{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--play);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnote::before{content:"\25B6\00A0"}
+.pinput{width:100%;margin-top:6px;font:inherit;font-size:14px;padding:6px 8px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);border-radius:0}
+.pinput:focus{outline:2px solid var(--accent);outline-offset:1px}
+/* pick three */
+.plist li{align-items:flex-start}
+.plist .ctitle{display:flex;flex-direction:column;gap:2px}
+.plist .chip{align-self:center}
+.pcover{flex:none;width:44px;height:59px;object-fit:cover;background:var(--line);border:1px solid var(--line)}

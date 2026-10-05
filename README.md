@@ -15,9 +15,14 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
 
 ## What it does
 
-- **Three states per game.** Tapping a row marks it played. The small ▶ marks the one
+- **Four states per game.** The checkbox marks it played. The small ▶ marks the one
   you're playing now — a rare state, so it gets its own control and leaves the one-tap
-  row click meaning "done".
+  checkbox meaning "done". **Shelved**, in the game panel, is for a game you started and
+  dropped: it fades, leaves the picks and the hours left, and Hide played hides it too.
+- **One game at a time.** Starting a game while another is ▶ asks whether to shelve the
+  old one, mark it played, or play both. It checks across both lists.
+- **Where you are.** While a game is ▶, its panel has a line for where you are (chapter,
+  area, percent). It shows under the title on the row, so the finish stays in sight.
 - **Time remaining.** The stats line under the bar totals the hours left in whatever is
   currently on screen, so filtering to one platform answers "how long is what's left
   here". Games marked `∞` are counted separately as endless.
@@ -50,7 +55,8 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
 - **Box art** and a short summary, genres and developer from IGDB in the game panel;
   More → Show → **Covers** puts thumbnails on the rows.
 - A **cart button** on each buyable game's row adds it without opening the panel.
-- **Pick one** chooses at random from what's on screen and not already finished.
+- **Pick 3** shows three random games from what's on screen that you haven't started,
+  finished or shelved, with **Play** on each and **Three more** to reroll.
 - **Shared progress.** Both pages read one store, keyed `year|title`. Open in two tabs
   and they stay in sync.
 - **Export / Import** moves progress between browsers and devices as a JSON file.

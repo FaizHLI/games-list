@@ -37,12 +37,12 @@ const RATE = "The first score is the players' (IGDB, weighted by how many rating
   "beside it is yours — tap it to rate in half stars. ";
 const TAIL = "Progress is shared with the other list, saves automatically, and can be exported.";
 const CANON_NOTE = "Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for " +
-  "its prices, store links, owned and cart. " +
+  "its prices, store links, owned and cart, to shelve it, or to note where you are. " +
   "Line under each title is the recommended way to play: NSO where available, emulator or ports when the " +
   "game is not on NSO or mods are a meaningful upgrade, remakes only when they are a significant upgrade. " +
   "Scope is home console and PC — mobile and annual sports releases are deliberately out. " + RATE + TAIL;
 const PLAY_NOTE = "Tick the box to mark a game played; the small ▶ marks the one you are playing now. Tap a game for " +
-  "its prices, store links, owned and cart. " +
+  "its prices, store links, owned and cart, to shelve it, or to note where you are. " +
   "The playlist is a view of the canon: everything that still holds up today. Console view groups Switch 2 " +
   "buys separately (60fps and not meaningfully inferior to PC). NSO where available, emulator or ports when " +
   "the game is not on NSO or mods are a meaningful upgrade. " + RATE + TAIL;
@@ -88,7 +88,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       <button class="chip" type="button" data-min="4" aria-pressed="false">4+</button>
       <button class="chip" type="button" data-min="4.25" aria-pressed="false">4.25+</button>
       <button class="chip" type="button" data-min="4.5" aria-pressed="false">4.5+</button>
-      <button class="chip" type="button" id="shuffle" title="Pick a random game from whatever is shown">Pick one</button>
+      <button class="chip" type="button" id="shuffle" title="Three random games from what is shown that you have not started">Pick 3</button>
       <button class="chip" type="button" id="cartBtn" hidden title="Games in your cart and what they cost now">Cart</button>
       <button class="chip" type="button" id="toggleFilters" aria-expanded="false" aria-controls="panel" title="Length, platform, sort and hide-played filters">More</button>
     </div>
@@ -127,7 +127,7 @@ try{var t=localStorage.getItem("games-list-theme-v1");if(t&&t!=="auto")document.
       </div>
       <div class="frow">
         <span class="flabel">SHOW</span>
-        <button class="chip" type="button" id="hideDone" aria-pressed="false">Hide played</button>
+        <button class="chip" type="button" id="hideDone" aria-pressed="false" title="Hides played and shelved games">Hide played</button>
         <button class="chip" type="button" data-own="y" aria-pressed="false">Owned</button>
         <button class="chip" type="button" data-own="n" aria-pressed="false">Not owned</button>
         <button class="chip" type="button" id="wishOnly" aria-pressed="false">Wishlist</button>
