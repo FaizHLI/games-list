@@ -28,6 +28,8 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   here". Games marked `∞` are counted separately as endless.
 - **Filters:** search, minimum rating, maximum length, and platform. Sort by year,
   platform, or rating. Hide played.
+- **Paired versions share a row.** Pokémon's paired releases (Red / Blue, Black / White
+  and so on) are one game, so they're one row with one checkbox and one time.
 - **Two ratings per game, kept apart.** The first badge is the community's: by default
   the players' score, IGDB's user average weighted by how many ratings it rests on (a
   Bayesian average, so 5.0 from six fans doesn't outrank 4.7 from 1,600); under More →
@@ -149,6 +151,10 @@ matched, worth a skim after adding pins.
 `exports/steam-owned-<date>.json`. On the site, Import that file: it adds those games
 to what you own and want, and leaves played marks, ratings and the cart alone. Owning a
 collection marks every game sold as it.
+
+A row that merges paired versions has a title IGDB and RAWG don't know, so
+`window.LOOKUP_AS` at the bottom of `data/games.js` gives the name to look it up by
+(`"2010|Pokémon Black / White": "Pokémon Black Version"`). The fetch tools use it.
 
 Progress is stored per `year|title`, so renaming a game or changing its year orphans
 whatever was saved under the old key. To carry it over, add `"old year|old title": "new

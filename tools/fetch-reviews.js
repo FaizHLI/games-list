@@ -34,6 +34,8 @@ const OVERRIDES = fs.existsSync(rel("tools/rawg-overrides.json"))
   ? JSON.parse(fs.readFileSync(rel("tools/rawg-overrides.json"), "utf8")) : {};
 
 const keyOf = g => g[0] + "|" + g[1];
+// a merged row ("Pokémon Black / White") is looked up as the entry these sites know
+const nameOf = g => (window.LOOKUP_AS || {})[keyOf(g)] || g[1];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
   .replace(/&/g, " and ").replace(/\([^)]*\)/g, " ").replace(/[^a-z0-9]+/g, " ").replace(/^the /, "").trim();
@@ -69,7 +71,7 @@ async function rawg(p){
   return r;
 }
 // a RAWG game that is this one: same name, and released within a year of it
-const fits = (g, r) => !!(r && r.name) && sameName(r.name, g[1]) && (!r.released || Math.abs(yearOf(r.released) - g[0]) <= 1);
+const fits = (g, r) => !!(r && r.name) && sameName(r.name, nameOf(g)) && (!r.released || Math.abs(yearOf(r.released) - g[0]) <= 1);
 
 async function metascore(g){
   const k = keyOf(g);
@@ -84,7 +86,7 @@ async function metascore(g){
     await sleep(150);
     if (fits(g, r)) return { mc: r.metacritic, slug: r.slug };
   }
-  const s = await rawg("games?search=" + encodeURIComponent(g[1].replace(/\s*\([^)]*\)/g, "")) + "&page_size=10");
+  const s = await rawg("games?search=" + encodeURIComponent(nameOf(g).replace(/\s*\([^)]*\)/g, "")) + "&page_size=10");
   const hit = ((s && s.results) || []).find(r => fits(g, r));
   return hit ? { mc: hit.metacritic, slug: hit.slug } : { miss: ((s && s.results) || []).slice(0, 4).map(r => r.name + " [" + r.slug + ", " + yearOf(r.released) + "]") };
 }
