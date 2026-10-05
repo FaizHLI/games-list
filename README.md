@@ -54,7 +54,8 @@ Scope is home console and PC. Mobile and annual sports releases are deliberately
   even when several of its games are in the cart. It appears once something is in it.
 - **Box art** and a short summary, genres and developer from IGDB in the game panel;
   More → Show → **Covers** puts thumbnails on the rows.
-- A **cart button** on each buyable game's row adds it without opening the panel.
+- A **cart button** on each buyable game's row adds it without opening the panel, and an
+  **owned button** on every row marks it owned in one tap.
 - **Pick 3** shows three random games from what's on screen that you haven't started,
   finished or shelved, with **Play** on each and **Three more** to reroll.
 - **Shared progress.** Both pages read one store, keyed `year|title`. Open in two tabs

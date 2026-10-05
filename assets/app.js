@@ -42,6 +42,10 @@ const list = document.getElementById("list");
 const CART_ICON = "<svg viewBox='0 0 16 16' width='14' height='14' aria-hidden='true'><path d='M1 2h2.2l1.6 8h8l1.6-6H4.2' " +
   "fill='none' stroke='currentColor' stroke-width='1.6' stroke-linejoin='round'/><circle cx='6' cy='13' r='1.3' " +
   "fill='currentColor'/><circle cx='12' cy='13' r='1.3' fill='currentColor'/></svg>";
+// a box with a check: in your library
+const OWN_ICON = "<svg viewBox='0 0 16 16' width='14' height='14' aria-hidden='true'><path d='M2 4h12v10H2z M2 4l1.5-2h9L14 4' " +
+  "fill='none' stroke='currentColor' stroke-width='1.6' stroke-linejoin='round'/><path d='M5.2 9l2 2 3.6-3.8' " +
+  "fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>";
 const $ = id => document.getElementById(id);
 
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
@@ -247,6 +251,8 @@ function makeRow(i, showYearInMethod){
     "<div class='titles'><span class='title'>" + esc(g[1]) + "</span>" +
     "<div class='method'><span class='own' hidden>OWNED</span><span class='own shelf' hidden>SHELVED</span><span class='own wish' hidden>WISHLIST</span><span class='own low' hidden>LOWEST</span>" + esc(method) + "</div>" +
     "<div class='pnote' hidden></div></div>" +
+    "<button class='owns' type='button' aria-pressed='false' title='Mark owned' " +
+      "aria-label='Mark " + escAttr(g[1]) + " as owned'>" + OWN_ICON + "</button>" +
     // only what you can buy gets a cart button; the rest keep the space so columns align
     (storeLinks(g).length
       ? "<button class='buy' type='button' aria-pressed='false' title='Add to cart' " +
@@ -277,6 +283,11 @@ function makeRow(i, showYearInMethod){
   row.querySelector(".mark").addEventListener("click", e => {
     e.stopPropagation();
     setStatus(i, row, PLAYING);
+  });
+  row.querySelector(".owns").addEventListener("click", e => {
+    e.stopPropagation();
+    toggleIn(owned, i);
+    showToast((owned.has(keyOf(g)) ? "Owned: " : "Not owned: ") + g[1]);
   });
   const buy = row.querySelector("button.buy");
   if (buy) buy.addEventListener("click", e => {
@@ -467,6 +478,9 @@ function paintRow(row, g){
     buy.title = inCart ? "In cart; tap to remove" : "Add to cart";
   }
   row.querySelector(".own").hidden = !owned.has(keyOf(g));
+  const own = row.querySelector(".owns"), isOwned = owned.has(keyOf(g));
+  own.setAttribute("aria-pressed", isOwned ? "true" : "false");
+  own.title = isOwned ? "Owned; tap to unmark" : "Mark owned";
   row.querySelector(".low").hidden = !atLowest(g);
   row.querySelector(".wish").hidden = !wish.has(keyOf(g));
 

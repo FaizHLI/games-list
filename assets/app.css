@@ -203,7 +203,7 @@ button.buy:hover{opacity:1}
 button.buy:focus-visible{opacity:1;outline:2px solid var(--accent);outline-offset:1px}
 button.buy[aria-pressed="true"]{opacity:1;background:var(--play);border-color:var(--play);color:var(--panel)}
 /* one more control on the row: tighten the gaps between the small ones on phones */
-@media (max-width:420px){ .row{gap:6px} .mark,.buy{width:26px} }
+@media (max-width:420px){ .row{gap:6px} .mark,.buy,.owns{width:26px} }
 
 /* box art: a thumbnail on the row when Covers is on, a larger one in the panel */
 .thumb{flex:none;width:32px;height:43px;object-fit:cover;background:var(--line);border:1px solid var(--line)}
@@ -228,3 +228,9 @@ span.thumb{opacity:.4}
 .plist .ctitle{display:flex;flex-direction:column;gap:2px}
 .plist .chip{align-self:center}
 .pcover{flex:none;width:44px;height:59px;object-fit:cover;background:var(--line);border:1px solid var(--line)}
+
+/* owned toggle on the row, in the OWNED tag's green */
+.owns{flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;border:2px solid transparent;background:none;color:var(--muted);opacity:.45;cursor:pointer;border-radius:0}
+.owns:hover{opacity:1}
+.owns:focus-visible{opacity:1;outline:2px solid var(--accent);outline-offset:1px}
+.owns[aria-pressed="true"]{opacity:1;background:var(--done);border-color:var(--done);color:var(--panel)}
