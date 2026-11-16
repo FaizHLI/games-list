@@ -1,5 +1,5 @@
 // Bump this to force clients onto a fresh cache.
-const CACHE = "games-list-5f7e2769d6";
+const CACHE = "games-list-e6ae173fb4";
 
 const SHELL = [
   "./",
@@ -10,7 +10,7 @@ const SHELL = [
   "./assets/app.css?v=4f31c636",
   "./data/games.js?v=79f071bd",
   "./data/scores.js?v=8b17688d",
-  "./data/prices.js?v=0f9b83db",
+  "./data/prices.js?v=2f4c2caa",
   "./data/reviews.js?v=96711076",
   "./data/meta.js?v=44025426",
   "./assets/app.js?v=f9660f0e",
